@@ -22,13 +22,13 @@ STAR_VEL = 3
 FONT = pygame.font.SysFont("gadugi", 30)    # Select text font and size
 
 
-def draw(player, elapsed_time, stars):      # updates the window, is called every frame
+def draw(player, elapsed_time, stars):      # updates the window, is called every frame (draw != move, draw is for updating the visuals (uses x,y), move is for updating the postion x,y)
     WIN.blit(BG, (0, 0))                    # Draw the background image
 
     time_text = FONT.render(f"Time: {elapsed_time:.1f}s", 1, "white")   # 1 is the anti-aliasing level, keep it 1 for better quality
-    WIN.blit(time_text, (10, 10))           # Draw the time text
+    WIN.blit(time_text, (10, 10))           # Draw the time text in its position (x,y)
 
-    pygame.draw.rect(WIN, "red", player)   
+    pygame.draw.rect(WIN, "red", player)   # blit is called for images and text, draw is called for shapes
 
     for star in stars:
         pygame.draw.rect(WIN, "white", star)
@@ -56,7 +56,8 @@ def main():
     hit = False
 
     while run:
-        star_count += clock.tick(60)        # star_count gets updated with the time elapsed since the last frame eg. 16ms
+        star_count += clock.tick(60)        # star_count gets updated with the time elapsed since the last frame (16ms)
+                                            # framerate is 60fps (aka we see 60 frames-images per sec), so 1 frame takes 16ms. The framerate depends on the number of sprites we have
         elapsed_time = time.time() - start_time
 
         if star_count > time_interval: # When 2000ms have passed since last addition of stars, add 3 stars
