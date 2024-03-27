@@ -38,11 +38,14 @@ class Player:
 my_player = Player(WIDTH/2 - 40/2, HEIGHT - 60, 40, 60)
 
 
-class Star(Player):
+class Star():                             
     star_count = 0                              # Counter to keep track of time (up to 2000ms)
     stars = []                                  # Active stars
     def __init__(self, x, y, width, height):
-        super().__init__(x, y, width, height)
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
         self.vel = 3
         Star.stars.append(self)
 
