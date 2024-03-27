@@ -14,7 +14,8 @@ BG = pygame.transform.scale(pygame.image.load("Assets/bg.jpeg"), (WIDTH, HEIGHT)
 
 # print(pygame.font.get_fonts())
 
-FONT = pygame.font.SysFont("gadugi", 30)    # Select text font and size
+FONT1 = pygame.font.SysFont("gadugi", 30, False, False)    # Select text font, size, bold, italic. Used for the time text
+FONT2 = pygame.font.SysFont("gadugi", 45, False, True)     # Used for the lost text
 
 
 class Player:
@@ -67,7 +68,7 @@ class Star():
 def draw(elapsed_time):      # updates the window, is called every frame (draw != move, draw is for updating the visuals (uses x,y), move is for updating the postion x,y)
     WIN.blit(BG, (0, 0))     # Draw the background image
 
-    time_text = FONT.render(f"Time: {elapsed_time:.1f}s", 1, "white")   # 1 is the anti-aliasing level, keep it 1 for better quality
+    time_text = FONT1.render(f"Time: {elapsed_time:.1f}s", 1, "white")   # 1 is the anti-aliasing level, keep it 1 for better quality
     WIN.blit(time_text, (10, 10))           # Draw the time text in its position (x,y)
                                             # blit is called for images and text, draw is called for shapes
     my_player.draw()
@@ -77,7 +78,7 @@ def draw(elapsed_time):      # updates the window, is called every frame (draw !
 
 
 def hit_draw():                    # Draw function that is called when the player hits a star
-    lost_text = FONT.render("You Lost!", 1, "white")
+    lost_text = FONT2.render("You Lost!", 1, "white")
     WIN.blit(lost_text, (WIDTH/2 - lost_text.get_width()/2, HEIGHT/2 - lost_text.get_height()/2))   # Center the text
     pygame.display.update()
     pygame.time.delay(2000)
