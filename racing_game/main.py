@@ -3,24 +3,21 @@ import time
 import math
 from utils import scale_image, blit_rotate_center
 
-GRASS = scale_image(pygame.image.load("imgs/grass.jpg"), 2.5)
-TRACK = scale_image(pygame.image.load("imgs/track.png"), 0.9)
+GRASS = scale_image(pygame.image.load("racing_game/imgs/grass.jpg"), 2)
+TRACK = scale_image(pygame.image.load("racing_game/imgs/track.png"), 0.85)
 
-TRACK_BORDER = scale_image(pygame.image.load("imgs/track-border.png"), 0.9)
+TRACK_BORDER = scale_image(pygame.image.load("racing_game/imgs/track-border.png"), 0.85)
 TRACK_BORDER_MASK = pygame.mask.from_surface(TRACK_BORDER)
 
-FINISH = pygame.image.load("imgs/finish.png")
+FINISH = pygame.image.load("racing_game/imgs/finish.png")
 FINISH_MASK = pygame.mask.from_surface(FINISH)
 FINISH_POSITION = (130, 250)
 
-RED_CAR = scale_image(pygame.image.load("imgs/red-car.png"), 0.55)
-GREEN_CAR = scale_image(pygame.image.load("imgs/green-car.png"), 0.55)
+RED_CAR = scale_image(pygame.image.load("racing_game/imgs/red-car.png"), 0.4)
 
 WIDTH, HEIGHT = TRACK.get_width(), TRACK.get_height()
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Racing Game!")
-
-FPS = 20
 
 
 class AbstractCar:
@@ -46,22 +43,26 @@ class AbstractCar:
         self.vel = min(self.vel + self.acceleration, self.max_vel)
         self.move()
 
-    def move_backward(self):
-        self.vel = max(self.vel - self.acceleration, -self.max_vel/2)
+    def move_backward(self):    # move backward with half the max speed
+        self.vel = max(self.vel - self.acceleration, -self.max_vel/2)   # max becasue these are negative values, we are still choosing the lower speed
         self.move()
 
     def move(self):
-        radians = math.radians(self.angle)
-        vertical = math.cos(radians) * self.vel
-        horizontal = math.sin(radians) * self.vel
+        angle_radians = math.radians(self.angle)
+        vertical_distance = math.cos(angle_radians) * self.vel       # the distance to move in the y direction
+        horizontal_distance = math.sin(angle_radians) * self.vel     # the distance to move in the x direction
 
-        self.y -= vertical
-        self.x -= horizontal
+        self.y -= vertical_distance
+        self.x -= horizontal_distance
 
     def collide(self, mask, x=0, y=0):
+        ''' 
+        Function that ckecks for pixel perfect collision between the car and the track.
+        It returns the point of intersection if there is a collision, otherwise it returns None.
+        '''
         car_mask = pygame.mask.from_surface(self.img)
         offset = (int(self.x - x), int(self.y - y))
-        poi = mask.overlap(car_mask, offset)
+        poi = mask.overlap(car_mask, offset)        # point of intersection
         return poi
 
     def reset(self):
@@ -72,10 +73,10 @@ class AbstractCar:
 
 class PlayerCar(AbstractCar):
     IMG = RED_CAR
-    START_POS = (180, 200)
+    START_POS = (160, 200)
 
     def reduce_speed(self):
-        self.vel = max(self.vel - self.acceleration / 2, 0)
+        self.vel = max(self.vel - self.acceleration / 2, 0)     # friction is half the acceleration
         self.move()
 
     def bounce(self):
@@ -93,51 +94,54 @@ def draw(win, images, player_car):
 
 def move_player(player_car):
     keys = pygame.key.get_pressed()
-    moved = False
+    throttling = False        
 
-    if keys[pygame.K_a]:
+    if keys[pygame.K_LEFT]:
         player_car.rotate(left=True)
-    if keys[pygame.K_d]:
+    if keys[pygame.K_RIGHT]:
         player_car.rotate(right=True)
-    if keys[pygame.K_w]:
-        moved = True
+    if keys[pygame.K_UP]:
+        throttling = True
         player_car.move_forward()
-    if keys[pygame.K_s]:
-        moved = True
+    if keys[pygame.K_DOWN]:
+        throttling = True
         player_car.move_backward()
 
-    if not moved:
+    if not throttling:                # if the player is not stepping on the gas, reduce the speed 
         player_car.reduce_speed()
 
 
 run = True
 clock = pygame.time.Clock()
-images = [(GRASS, (0, 0)), (TRACK, (0, 0)),
-          (FINISH, FINISH_POSITION), (TRACK_BORDER, (0, 0))]
+FPS = 20
+images = [(GRASS, (0, 0)), (TRACK, (0, 0)), (FINISH, FINISH_POSITION), (TRACK_BORDER, (0, 0))]
 player_car = PlayerCar(8, 8)
+counter = 1
 
 while run:
     clock.tick(FPS)
 
     draw(WIN, images, player_car)
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+    for event in pygame.event.get():            
+        if event.type == pygame.QUIT:       # If the user closes the window, the game stops
             run = False
             break
 
     move_player(player_car)
 
     if player_car.collide(TRACK_BORDER_MASK) != None:
+        print(f"collision no: {counter}")
+        counter += 1
         player_car.bounce()
 
-    finish_poi_collide = player_car.collide(FINISH_MASK, *FINISH_POSITION)
+    finish_poi_collide = player_car.collide(FINISH_MASK, *FINISH_POSITION) 
     if finish_poi_collide != None:
         if finish_poi_collide[1] == 0:
-            player_car.bounce()
+            player_car.bounce()             # if the car hits the finish line from the top, bounce
         else:
             player_car.reset()
-            print("finish")
+            print("finish lap")
 
 
 pygame.quit()
