@@ -7,7 +7,7 @@ WIDTH, HEIGHT = 1000, 700                       # Set the width and height of th
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # Create a window
 pygame.display.set_caption("Space Dodge")       # Set the title of the window
 
-BG = pygame.transform.scale(pygame.image.load("assets/bg.jpeg"), (WIDTH, HEIGHT))  # Load the background image and scale it to the window size
+BG = pygame.transform.scale(pygame.image.load("space_dodge/imgs/bg.jpeg"), (WIDTH, HEIGHT))  # Load the background image and scale it to the window size
 
 PLAYER_WIDTH = 40
 PLAYER_HEIGHT = 60
