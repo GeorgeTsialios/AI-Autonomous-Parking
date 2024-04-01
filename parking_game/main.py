@@ -3,21 +3,21 @@ import time
 import math
 from utils import scale_image, blit_rotate_center
 
-PARKING_LOT = scale_image(pygame.image.load("imgs/parking-lot.png"), 1)
+PARKING_LOT = scale_image(pygame.image.load("parking_game/imgs/parking-lot.png"), 1)
 
-#PARKING_LOT_BORDER = scale_image(pygame.image.load("imgs/PARKING_LOT-border.png"), 0.85)
+#PARKING_LOT_BORDER = scale_image(pygame.image.load("parking_game/imgs/PARKING_LOT-border.png"), 0.85)
 #PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
-#FINISH = pygame.image.load("imgs/finish.png")
+#FINISH = pygame.image.load("parking_game/imgs/finish.png")
 #FINISH_MASK = pygame.mask.from_surface(FINISH)
 # FINISH_POSITION = (130, 250)
 
-RED_CAR = scale_image(pygame.image.load("imgs/red-car2.png"), 40/162)            # factor is equal to desired width of car / actual width of image
-YELLOW_CAR = scale_image(pygame.image.load("imgs/yellow-car.png"), 40/162)       # this way all cars have the same width (40px) 
-PINK_CAR = scale_image(pygame.image.load("imgs/pink-car.png"), 40/162)
-GREEN_CAR = scale_image(pygame.image.load("imgs/green-car.png"), 40/163)
-PURPLE_CAR = scale_image(pygame.image.load("imgs/purple-car.png"), 40/164)
-# WHITE_CAR = scale_image(pygame.image.load("imgs/white-car-old.png"), 40/38)
+RED_CAR = scale_image(pygame.image.load("parking_game/imgs/red-car2.png"), 40/162)            # factor is equal to desired width of car / actual width of image
+YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/yellow-car.png"), 40/162)       # this way all cars have the same width (40px) 
+PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/pink-car.png"), 40/162)
+GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/green-car.png"), 40/163)
+PURPLE_CAR = scale_image(pygame.image.load("parking_game/imgs/purple-car.png"), 40/164)
+# WHITE_CAR = scale_image(pygame.image.load("parking_game/imgs/white-car-old.png"), 40/38)
 
 
 WIDTH, HEIGHT = PARKING_LOT.get_width(), PARKING_LOT.get_height()

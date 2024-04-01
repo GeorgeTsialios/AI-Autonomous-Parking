@@ -3,17 +3,17 @@ import time
 import math
 from utils import scale_image, blit_rotate_center
 
-GRASS = scale_image(pygame.image.load("imgs/grass.jpg"), 2)
-TRACK = scale_image(pygame.image.load("imgs/track.png"), 0.85)
+GRASS = scale_image(pygame.image.load("racing_game/imgs/grass.jpg"), 2)
+TRACK = scale_image(pygame.image.load("racing_game/imgs/track.png"), 0.85)
 
-TRACK_BORDER = scale_image(pygame.image.load("imgs/track-border.png"), 0.85)
+TRACK_BORDER = scale_image(pygame.image.load("racing_game/imgs/track-border.png"), 0.85)
 TRACK_BORDER_MASK = pygame.mask.from_surface(TRACK_BORDER)
 
-FINISH = pygame.image.load("imgs/finish.png")
+FINISH = pygame.image.load("racing_game/imgs/finish.png")
 FINISH_MASK = pygame.mask.from_surface(FINISH)
 FINISH_POSITION = (130, 250)
 
-RED_CAR = scale_image(pygame.image.load("imgs/red-car.png"), 0.4)
+RED_CAR = scale_image(pygame.image.load("racing_game/imgs/red-car.png"), 0.4)
 
 WIDTH, HEIGHT = TRACK.get_width(), TRACK.get_height()
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
