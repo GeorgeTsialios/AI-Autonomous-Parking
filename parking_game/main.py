@@ -15,6 +15,8 @@ def scale_image(img, factor):
     return pygame.transform.scale(img, size)  
 
 PARKING_LOT = pygame.image.load("parking_game/imgs/parking-lot.png")
+PARKING_LOT_BORDER = pygame.image.load("parking_game/imgs/parking-lot-border.png")
+PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
 RED_CAR = scale_image(pygame.image.load("parking_game/imgs/red-car2.png"), 40/162)            # factor is equal to desired width of car / actual width of image
 YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/yellow-car.png"), 40/162)       # this way all cars have the same width (40px) 
@@ -49,8 +51,8 @@ class AbstractCar:
 
     def draw(self):
         new_img = self.rotate_center()
-        WIN.blit(new_img[0], new_img[1])
-        if self.collide(new_img[1]):
+        WIN.blit(new_img[0], new_img[1].topleft)
+        if self.collide(new_img[1], new_img[2]):
             self.bounce()
     
     def rotate_center(self):
@@ -59,31 +61,40 @@ class AbstractCar:
         '''        
         rotated_image = pygame.transform.rotate(self.img, self.angle)
         new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft=(self.x, self.y)).center)
-        return rotated_image, new_rect
+        new_mask = pygame.mask.from_surface(rotated_image)      # create a new mask for the rotated image. This is necessary for pixel perfect collision detection.
+        return rotated_image, new_rect, new_mask
     
-    def collide(self, new_rect):
-        if new_rect.colliderect(GARDEN):            # colliderect() is less computanionally expensive than pixel perfect collision detection using masks
-            intersection = new_rect.clip(GARDEN)     # returns a new rectangle that represents the intersection of the two rectangles
-            pygame.draw.rect(WIN, (255, 0, 0), intersection)
-            pygame.display.update()
-            print(f"collision")
-            return True
+    def collide(self, new_rect, new_mask):
+        if new_rect.colliderect(GARDEN):                # colliderect() is less computanionally expensive than pixel perfect collision detection using masks. That's why we first check if the rectangles collide.
+            intersection = new_rect.clip(GARDEN)        # returns a new rectangle that represents the intersection of the two rectangles.
+            # pygame.draw.rect(WIN, (0, 0, 0), new_rect)
+            offset = (int(new_rect.x), int(new_rect.y))     # offset is the difference between the top left corner of the car image and the top left corner of the window (border mask)
+            if PARKING_LOT_BORDER_MASK.overlap(new_mask, offset) is not None:   # now we check for pixel perfect collision, because when the car is turning, the new_rect rectangle is bigger than the car image. This leads to false positive collision detetctions when the car is turning around the edges of the garden.
+                print(f"collision")
+                pygame.draw.rect(WIN, (255, 0, 0), intersection)                # draw a red rectangle around the point of intersection
+                return True
         return False
 
     def bounce(self):
+        '''
+        This method tries to move the car away from the object it is colliding with.
+        To do so, it changes the velocity of the car, so that it moves in the opposite direction.
+        The car will keep moving in this direction until it is no longer colliding with the object.
+        After that, the car will stop moving.
+        '''
         print(self.vel)
-        self.vel = -self.vel
-        if self.vel == 0:
-            self.vel = -0.1
+        self.vel = -self.vel                            # reverse the direction of the car, so that it exits from colliding 
+        # if self.vel == 0:         # this was used for when the car was stuck colliding while having velocity = 0, the game would crash
+        #     self.vel = -0.1       # however I think this is not necessary anymore, because the car will always have a velocity different from 0 (you can not press the up arrow key and the down arrow key at the same time)
         counter = 0
         while True:
             print(self.vel)
             counter += 1
-            if counter == 50:
+            if counter == 50:                           # if the car is stuck in an infinite loop, break it. This happerns when the car was colliding with the object while moving away from it. For example, the car would be moving in reverse and turning at the same time. Its rotation eould make it so that its front car would be colliding with the object, while its back would be moving away from it. So the switching in its velocity in line 80 woul be a mistake and would force the car to move into the object. That's why, if the while loop runs for too long, we assume that this is the issue and we switch the velocity again. 
                 self.vel = -self.vel
             self.move()
             new_img = self.rotate_center()
-            if not self.collide(new_img[1]):
+            if not self.collide(new_img[1], new_img[2]):
                 break
         self.vel = 0
 
@@ -102,16 +113,6 @@ class AbstractCar:
 
         self.y -= vertical_distance
         self.x -= horizontal_distance
-
-    # def collide(self, mask, x=0, y=0):
-    #     ''' 
-    #     Function that ckecks for pixel perfect collision between the car and the PARKING_LOT.
-    #     It returns the point of intersection if there is a collision, otherwise it returns None.
-    #     '''
-    #     car_mask = pygame.mask.from_surface(self.img)
-    #     offset = (int(self.x - x), int(self.y - y))
-    #     poi = mask.overlap(car_mask, offset)        # point of intersection
-    #     return poi
 
     def reset(self):
         self.x, self.y = self.START_POS
