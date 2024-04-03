@@ -26,6 +26,10 @@ PURPLE_CAR = scale_image(pygame.image.load("parking_game/imgs/purple-car.png"), 
 # WHITE_CAR = scale_image(pygame.image.load("parking_game/imgs/white-car-old.png"), 40/38)
 
 GARDEN = pygame.Rect(125, 325, 500, 100)
+TOP_RECT = pygame.Rect(0, -5, 750, 5)
+BOTTOM_RECT = pygame.Rect(0, 750, 750, 5)
+LEFT_RECT = pygame.Rect(-5, 0, 5, 750)
+RIGHT_RECT = pygame.Rect(750, 0, 5, 750)
 
 WIN_WIDTH, WIN_HEIGHT = PARKING_LOT.get_width(), PARKING_LOT.get_height()
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
@@ -54,6 +58,9 @@ class AbstractCar:
         WIN.blit(new_img[0], new_img[1].topleft)
         if self.collide(new_img[1], new_img[2]):
             self.bounce()
+        if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, reset it
+            print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
+            self.reset()
     
     def rotate_center(self):
         '''
@@ -70,8 +77,24 @@ class AbstractCar:
             # pygame.draw.rect(WIN, (0, 0, 0), new_rect)
             offset = (int(new_rect.x), int(new_rect.y))     # offset is the difference between the top left corner of the car image and the top left corner of the window (border mask)
             if PARKING_LOT_BORDER_MASK.overlap(new_mask, offset) is not None:   # now we check for pixel perfect collision, because when the car is turning, the new_rect rectangle is bigger than the car image. This leads to false positive collision detetctions when the car is turning around the edges of the garden.
-                print(f"collision")
+                print(f"collision with garden")
                 pygame.draw.rect(WIN, (255, 0, 0), intersection)                # draw a red rectangle around the point of intersection
+                return True
+        elif new_rect.colliderect(TOP_RECT):
+                print(f"collision with top rect")
+                print(f"x: {new_rect.x}, y: {new_rect.y}")
+                return True
+        elif new_rect.colliderect(BOTTOM_RECT):
+                print(f"collision with bottom rect")
+                print(f"x: {new_rect.x}, y: {new_rect.y}")
+                return True
+        elif new_rect.colliderect(LEFT_RECT):
+                print(f"collision with left rect")
+                print(f"x: {new_rect.x}, y: {new_rect.y}")
+                return True
+        elif new_rect.colliderect(RIGHT_RECT):
+                print(f"collision with right rect")
+                print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         return False
 
@@ -82,15 +105,15 @@ class AbstractCar:
         The car will keep moving in this direction until it is no longer colliding with the object.
         After that, the car will stop moving.
         '''
-        print(self.vel)
+        print(f"{self.vel:.2f}")
         self.vel = -self.vel                            # reverse the direction of the car, so that it exits from colliding 
         # if self.vel == 0:         # this was used for when the car was stuck colliding while having velocity = 0, the game would crash
         #     self.vel = -0.1       # however I think this is not necessary anymore, because the car will always have a velocity different from 0 (you can not press the up arrow key and the down arrow key at the same time)
         counter = 0
         while True:
-            print(self.vel)
+            print(f"{self.vel:.2f}")
             counter += 1
-            if counter == 50:                           # if the car is stuck in an infinite loop, break it. This happerns when the car was colliding with the object while moving away from it. For example, the car would be moving in reverse and turning at the same time. Its rotation eould make it so that its front car would be colliding with the object, while its back would be moving away from it. So the switching in its velocity in line 80 woul be a mistake and would force the car to move into the object. That's why, if the while loop runs for too long, we assume that this is the issue and we switch the velocity again. 
+            if counter == 50:                           # if the car is stuck in an infinite loop, break it. This happens when the car was colliding with the object while moving away from it. For example, the car would be moving in reverse and turning at the same time. Its rotation eould make it so that its front car would be colliding with the object, while its back would be moving away from it. So the switching in its velocity in line 80 woul be a mistake and would force the car to move into the object. That's why, if the while loop runs for too long, we assume that this is the issue and we switch the velocity again. 
                 self.vel = -self.vel
             self.move()
             new_img = self.rotate_center()
