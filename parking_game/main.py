@@ -9,7 +9,10 @@
 import pygame
 import time
 import math
-from utils import scale_image
+
+def scale_image(img, factor):
+    size = round(img.get_width() * factor), round(img.get_height() * factor)        # size is a tuple of 2 integers, the new width and height of the image
+    return pygame.transform.scale(img, size)  
 
 PARKING_LOT = pygame.image.load("parking_game/imgs/parking-lot.png")
 
@@ -128,12 +131,13 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
                     self.rotate(left=True)
             if keys[pygame.K_RIGHT]:
                     self.rotate(right=True)
-        if keys[pygame.K_UP]:
-            throttling = True
-            self.move_forward()
-        if keys[pygame.K_DOWN]:
-            throttling = True
-            self.move_backward()
+        if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):          # if both keys are pressed, the car should not move
+            if keys[pygame.K_UP]:
+                throttling = True
+                self.move_forward()
+            if keys[pygame.K_DOWN]:
+                throttling = True
+                self.move_backward()
 
         if not throttling and self.vel !=0:                # if the player is not stepping on the gas, reduce the speed 
             self.reduce_speed()
