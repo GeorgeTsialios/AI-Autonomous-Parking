@@ -62,7 +62,10 @@ class AbstractCar:
         return rotated_image, new_rect
     
     def collide(self, new_rect):
-        if new_rect.colliderect(GARDEN):
+        if new_rect.colliderect(GARDEN):            # colliderect() is less computanionally expensive than pixel perfect collision detection using masks
+            intersection = new_rect.clip(GARDEN)     # returns a new rectangle that represents the intersection of the two rectangles
+            pygame.draw.rect(WIN, (255, 0, 0), intersection)
+            pygame.display.update()
             print(f"collision")
             return True
         return False
@@ -72,8 +75,12 @@ class AbstractCar:
         self.vel = -self.vel
         if self.vel == 0:
             self.vel = -0.1
+        counter = 0
         while True:
             print(self.vel)
+            counter += 1
+            if counter == 50:
+                self.vel = -self.vel
             self.move()
             new_img = self.rotate_center()
             if not self.collide(new_img[1]):
@@ -126,11 +133,10 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
     def move_player(self):
         keys = pygame.key.get_pressed()
         throttling = False        
-        if not (keys[pygame.K_LEFT] and keys[pygame.K_RIGHT]):          # if both keys are pressed, the car should not rotate
-            if keys[pygame.K_LEFT]:
-                    self.rotate(left=True)
-            if keys[pygame.K_RIGHT]:
-                    self.rotate(right=True)
+        if keys[pygame.K_LEFT]:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
+                self.rotate(left=True)          # Due to this limitation of keyboard, we can only detect two arrow key presses at a time. This means that if the player is pressing the left and the right arrow key
+        if keys[pygame.K_RIGHT]:                # and then presses the up arrow key, the car will not move, as this third key press will not be detected.
+                self.rotate(right=True)
         if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):          # if both keys are pressed, the car should not move
             if keys[pygame.K_UP]:
                 throttling = True
