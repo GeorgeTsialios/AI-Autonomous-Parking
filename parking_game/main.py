@@ -9,7 +9,7 @@
 import pygame
 import time
 import math
-from utils import scale_image, blit_rotate_center
+from utils import scale_image
 
 PARKING_LOT = pygame.image.load("parking_game/imgs/parking-lot.png")
 
@@ -44,15 +44,37 @@ class AbstractCar:
             elif right:
                 self.angle -= self.rotation_vel * self.vel
 
-    def draw(self, win):
-      if  blit_rotate_center(win, self.img, (self.x, self.y), self.angle):
-          self.bounce()
+    def draw(self):
+        new_img = self.rotate_center()
+        WIN.blit(new_img[0], new_img[1])
+        if self.collide(new_img[1]):
+            self.bounce()
     
+    def rotate_center(self):
+        '''
+        This function rotates an image around its center and blits it to the window.
+        '''        
+        rotated_image = pygame.transform.rotate(self.img, self.angle)
+        new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft=(self.x, self.y)).center)
+        return rotated_image, new_rect
+    
+    def collide(self, new_rect):
+        if new_rect.colliderect(GARDEN):
+            print(f"collision")
+            return True
+        return False
+
     def bounce(self):
+        print(self.vel)
         self.vel = -self.vel
-        self.move()
-        while blit_rotate_center(WIN, self.img, (self.x, self.y), self.angle):
-          self.move()
+        if self.vel == 0:
+            self.vel = -0.1
+        while True:
+            print(self.vel)
+            self.move()
+            new_img = self.rotate_center()
+            if not self.collide(new_img[1]):
+                break
         self.vel = 0
 
     def move_forward(self):
@@ -71,15 +93,15 @@ class AbstractCar:
         self.y -= vertical_distance
         self.x -= horizontal_distance
 
-    def collide(self, mask, x=0, y=0):
-        ''' 
-        Function that ckecks for pixel perfect collision between the car and the PARKING_LOT.
-        It returns the point of intersection if there is a collision, otherwise it returns None.
-        '''
-        car_mask = pygame.mask.from_surface(self.img)
-        offset = (int(self.x - x), int(self.y - y))
-        poi = mask.overlap(car_mask, offset)        # point of intersection
-        return poi
+    # def collide(self, mask, x=0, y=0):
+    #     ''' 
+    #     Function that ckecks for pixel perfect collision between the car and the PARKING_LOT.
+    #     It returns the point of intersection if there is a collision, otherwise it returns None.
+    #     '''
+    #     car_mask = pygame.mask.from_surface(self.img)
+    #     offset = (int(self.x - x), int(self.y - y))
+    #     poi = mask.overlap(car_mask, offset)        # point of intersection
+    #     return poi
 
     def reset(self):
         self.x, self.y = self.START_POS
@@ -94,23 +116,18 @@ class AbstractCar:
         self.move()
 
 
-class PlayerCar(AbstractCar):
-    # IMG = WHITE_CAR
-    # IMG = GREEN_CAR
-    # IMG = YELLOW_CAR
-    # IMG = PURPLE_CAR
-    # IMG = PINK_CAR
+class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR
     START_POS = (400, 100)
 
     def move_player(self):
         keys = pygame.key.get_pressed()
         throttling = False        
-
-        if keys[pygame.K_LEFT]:
-                self.rotate(left=True)
-        if keys[pygame.K_RIGHT]:
-                self.rotate(right=True)
+        if not (keys[pygame.K_LEFT] and keys[pygame.K_RIGHT]):          # if both keys are pressed, the car should not rotate
+            if keys[pygame.K_LEFT]:
+                    self.rotate(left=True)
+            if keys[pygame.K_RIGHT]:
+                    self.rotate(right=True)
         if keys[pygame.K_UP]:
             throttling = True
             self.move_forward()
@@ -122,10 +139,10 @@ class PlayerCar(AbstractCar):
             self.reduce_speed()
 
 
-def draw_window(win, player_car):
-    win.blit(PARKING_LOT, (0, 0))
+def draw_window(player_car):
+    WIN.blit(PARKING_LOT, (0, 0))
 
-    player_car.draw(win)
+    player_car.draw()
     pygame.display.update()
 
 
@@ -143,7 +160,7 @@ while run:
             break
 
     player_car.move_player()
-    draw_window(WIN, player_car)
+    draw_window(player_car)
 
     # if player_car.img.get_rect(topleft=(player_car.x, player_car.y)).colliderect(GARDEN):
     #     print(f"collision no: {counter}")
