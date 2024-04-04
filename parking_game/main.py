@@ -38,11 +38,12 @@ WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 pygame.display.set_caption("Parking Game!")
 
 CAR_WIDTH, CAR_HEIGHT = 40, 81.24
-parking_spots = [pygame.Rect(158.33, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(256.66, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(354.99, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(453.32, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(551.65, 210.89, CAR_WIDTH, CAR_HEIGHT),
-                 pygame.Rect(158.33, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(256.66, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(354.99, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT)]
+cars = [YELLOW_CAR, PINK_CAR, GREEN_CAR, PURPLE_CAR]
+parking_spots = {1: [pygame.Rect(158.33, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 158.33, 210.89], 2: [pygame.Rect(256.66, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 256.66, 210.89], 3: [pygame.Rect(354.99, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 354.99, 210.89], 4: [pygame.Rect(453.32, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 453.32, 210.89], 5: [pygame.Rect(551.65, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 551.65, 210.89],
+                 6: [pygame.Rect(158.33, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 158.33, 457.88], 7: [pygame.Rect(256.66, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 256.66, 457.88], 8: [pygame.Rect(354.99, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 354.99, 457.88], 9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 453.32, 457.88], 10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 551.65, 457.88]}
 free_spot_index = random.randint(1, 10)
 print(f"Free spot: {free_spot_index}")
-parking_spots.pop(free_spot_index - 1)
+parking_spots.pop(free_spot_index)
 
 PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
 PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
@@ -112,12 +113,12 @@ class AbstractCar:
                 print(f"collision with right rect")
                 print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
-        for spot in parking_spots:
-            if new_rect.colliderect(spot):
+        for index, spot in parking_spots.items():
+            if new_rect.colliderect(spot[0]):
                 if PARKING_LOT_BORDER_MASK.overlap(new_mask, offset) is not None: 
-                    intersection = new_rect.clip(spot)
+                    intersection = new_rect.clip(spot[0])
                     pygame.draw.rect(WIN, (255, 0, 0), intersection)
-                    print(f"collision with parking spot")
+                    print(f"collision with car {index}")
                     print(f"x: {new_rect.x}, y: {new_rect.y}")
                     return True
         return False
@@ -200,8 +201,10 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
 def draw_window(player_car):
     WIN.blit(PARKING_LOT, (0, 0))
 
-    for spot in parking_spots:
-        pygame.draw.rect(WIN, (255, 255, 0), spot)
+    for index, spot in parking_spots.items():
+        #  pygame.draw.rect(WIN, (255, 255, 0), spot[0])
+        WIN.blit(spot[1], (spot[2], spot[3]))
+   
         
     player_car.draw()
 
