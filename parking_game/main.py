@@ -37,7 +37,7 @@ WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 pygame.display.set_caption("Parking Game!")
 
 CAR_WIDTH, CAR_HEIGHT = 40, 81.24
-cars = [YELLOW_CAR, PINK_CAR, GREEN_CAR, PURPLE_CAR]
+cars = [YELLOW_CAR, pygame.transform.flip(YELLOW_CAR, False, True), PINK_CAR, pygame.transform.flip(PINK_CAR, False, True), GREEN_CAR, pygame.transform.flip(GREEN_CAR, False, True), PURPLE_CAR, pygame.transform.flip(PURPLE_CAR, False, True)]     # flip() is used to flip the image vertically
 parking_spots = {1: [pygame.Rect(158.33, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 158.33, 210.89], 2: [pygame.Rect(256.66, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 256.66, 210.89], 3: [pygame.Rect(354.99, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 354.99, 210.89], 4: [pygame.Rect(453.32, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 453.32, 210.89], 5: [pygame.Rect(551.65, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 551.65, 210.89],
                  6: [pygame.Rect(158.33, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 158.33, 457.88], 7: [pygame.Rect(256.66, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 256.66, 457.88], 8: [pygame.Rect(354.99, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 354.99, 457.88], 9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 453.32, 457.88], 10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 551.65, 457.88]}
 free_spot_index = random.randint(1, 10)
