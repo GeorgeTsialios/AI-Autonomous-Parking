@@ -47,6 +47,12 @@ parking_spots.pop(free_spot_index)
 PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
 PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
+spawn_rects = [pygame.Rect(10, 10, 650, 94), pygame.Rect(10, 566, 650, 94), pygame.Rect(10, 184, 25, 382), pygame.Rect(635, 184, 25, 382)]
+car_spawn_index = random.randint(0, 3)
+# I want to randomly select a point (x,y) from the spawn_rects[car_spawn_index] rectangle, so that the car does not spawn on the garden or the parking spots
+player_car_spawn = spawn_rects[car_spawn_index]
+player_car_spawn.x += random.randint(0, player_car_spawn.width)
+player_car_spawn.y += random.randint(0, player_car_spawn.height)
 
 class AbstractCar:
     def __init__(self, max_vel, rotation_vel):
@@ -54,7 +60,7 @@ class AbstractCar:
         self.max_vel = max_vel
         self.vel = 0
         self.rotation_vel = rotation_vel
-        self.angle = 0
+        self.angle = random.randint(0, 360)
         self.x, self.y = self.START_POS
         self.acceleration = 0.1
         self.last_x, self.last_y = self.x, self.y
@@ -176,7 +182,7 @@ class AbstractCar:
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR
-    START_POS = (400, 100)
+    START_POS = (player_car_spawn.x, player_car_spawn.y)
 
     def move_player(self):
         keys = pygame.key.get_pressed()
