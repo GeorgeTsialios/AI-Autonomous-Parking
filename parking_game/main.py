@@ -9,16 +9,16 @@
 import pygame
 import time
 import math
+import random
 
 def scale_image(img, factor):
     size = round(img.get_width() * factor), round(img.get_height() * factor)        # size is a tuple of 2 integers, the new width and height of the image
     return pygame.transform.scale(img, size)  
 
 PARKING_LOT = pygame.image.load("parking_game/imgs/parking-lot.png")
-PARKING_LOT_BORDER = pygame.image.load("parking_game/imgs/parking-lot-border.png")
-PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
-PARKING_LOT_BORDER2 = pygame.image.load("parking_game/imgs/parking-lot-border2.png")
-PARKING_LOT_BORDER2_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER2)
+GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
+GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
+
 
 RED_CAR = scale_image(pygame.image.load("parking_game/imgs/red-car2.png"), 40/161)            # factor is equal to desired width of car / actual width of image
 YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/yellow-car.png"), 40/162)       # this way all cars have the same width (40px) 
@@ -40,6 +40,12 @@ pygame.display.set_caption("Parking Game!")
 CAR_WIDTH, CAR_HEIGHT = 40, 81.24
 parking_spots = [pygame.Rect(158.33, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(256.66, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(354.99, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(453.32, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(551.65, 210.89, CAR_WIDTH, CAR_HEIGHT),
                  pygame.Rect(158.33, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(256.66, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(354.99, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT)]
+free_spot_index = random.randint(1, 10)
+print(f"Free spot: {free_spot_index}")
+parking_spots.pop(free_spot_index - 1)
+
+PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
+PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
 
 class AbstractCar:
@@ -85,7 +91,7 @@ class AbstractCar:
         
         if new_rect.colliderect(GARDEN):                # colliderect() is less computanionally expensive than pixel perfect collision detection using masks. That's why we first check if the rectangles collide.
             # pygame.draw.rect(WIN, (0, 0, 0), new_rect)
-            if PARKING_LOT_BORDER_MASK.overlap(new_mask, offset) is not None:   # now we check for pixel perfect collision, because when the car is turning, the new_rect rectangle is bigger than the car image. This leads to false positive collision detetctions when the car is turning around the edges of the garden.
+            if GARDEN_BORDER_MASK.overlap(new_mask, offset) is not None:   # now we check for pixel perfect collision, because when the car is turning, the new_rect rectangle is bigger than the car image. This leads to false positive collision detetctions when the car is turning around the edges of the garden.
                 intersection = new_rect.clip(GARDEN)        # returns a new rectangle that represents the intersection of the two rectangles.
                 pygame.draw.rect(WIN, (255, 0, 0), intersection)                # draw a red rectangle around the point of intersection
                 print(f"collision with garden")
@@ -108,7 +114,7 @@ class AbstractCar:
                 return True
         for spot in parking_spots:
             if new_rect.colliderect(spot):
-                if PARKING_LOT_BORDER2_MASK.overlap(new_mask, offset) is not None: 
+                if PARKING_LOT_BORDER_MASK.overlap(new_mask, offset) is not None: 
                     intersection = new_rect.clip(spot)
                     pygame.draw.rect(WIN, (255, 0, 0), intersection)
                     print(f"collision with parking spot")
