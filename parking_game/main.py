@@ -51,6 +51,7 @@ class AbstractCar:
         self.angle = 0
         self.x, self.y = self.START_POS
         self.acceleration = 0.1
+        self.last_x, self.last_y = self.x, self.y
 
     def rotate(self, left=False, right=False):
         if abs(self.vel) > 0:        # if the car is moving, it can rotate
@@ -64,6 +65,8 @@ class AbstractCar:
         WIN.blit(new_img[0], new_img[1].topleft)
         if self.collide(new_img[1], new_img[2]):
             self.bounce()
+        else:
+             self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
         if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, reset it
             print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
             self.reset()
@@ -132,7 +135,7 @@ class AbstractCar:
                 self.vel = -self.vel
             self.move()
             new_img = self.rotate_center()
-            if not self.collide(new_img[1], new_img[2]):
+            if not self.collide(new_img[1], new_img[2]) and (self.x, self.y) != (self.last_x, self.last_y):     # the 2nd condition is necessary, because the car would be stuck in an infinite loop when it was colliding with the object in 2 adjacent points, around one safe point. This would happen when the car was turning around the edges of the parking spots. It would collide with the parking spot in one point, then return to the safe point and when it moved in the opposite direction, it would collide in the 2nd point and return to the safe point again. This would repeat indefinitely.
                 break
         self.vel = 0
 
