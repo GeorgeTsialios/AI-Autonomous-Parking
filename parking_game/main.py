@@ -20,12 +20,11 @@ GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
 GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
 
 
-RED_CAR = scale_image(pygame.image.load("parking_game/imgs/red-car2.png"), 40/161)            # factor is equal to desired width of car / actual width of image
-YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/yellow-car.png"), 40/162)       # this way all cars have the same width (40px) 
-PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/pink-car.png"), 40/162)
-GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/green-car.png"), 40/163)
-PURPLE_CAR = scale_image(pygame.image.load("parking_game/imgs/purple-car.png"), 40/164)
-# WHITE_CAR = scale_image(pygame.image.load("parking_game/imgs/white-car-old.png"), 40/38)
+RED_CAR = scale_image(pygame.image.load("parking_game/imgs/car-red.png"), 40/161)            # factor is equal to desired width of car / actual width of image
+YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/car-yellow.png"), 40/162)       # this way all cars have the same width (40px) 
+PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink.png"), 40/162)
+GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green.png"), 40/163)
+PURPLE_CAR = scale_image(pygame.image.load("parking_game/imgs/car-purple.png"), 40/164)
 
 GARDEN = pygame.Rect(125, 325, 500, 100)
 TOP_RECT = pygame.Rect(0, -5, 750, 5)
@@ -93,8 +92,8 @@ class AbstractCar:
         if new_rect.colliderect(GARDEN):                # colliderect() is less computanionally expensive than pixel perfect collision detection using masks. That's why we first check if the rectangles collide.
             # pygame.draw.rect(WIN, (0, 0, 0), new_rect)
             if GARDEN_BORDER_MASK.overlap(new_mask, offset) is not None:   # now we check for pixel perfect collision, because when the car is turning, the new_rect rectangle is bigger than the car image. This leads to false positive collision detetctions when the car is turning around the edges of the garden.
-                intersection = new_rect.clip(GARDEN)        # returns a new rectangle that represents the intersection of the two rectangles.
-                pygame.draw.rect(WIN, (255, 0, 0), intersection)                # draw a red rectangle around the point of intersection
+                intersection = new_rect.clip(GARDEN)                       # returns a new rectangle that represents the intersection of the two rectangles.
+                pygame.draw.rect(WIN, (255, 0, 0), intersection)           # draw a red rectangle around the point of intersection
                 print(f"collision with garden")
                 return True
         elif new_rect.colliderect(TOP_RECT):
@@ -226,19 +225,6 @@ while run:
 
     player_car.move_player()
     draw_window(player_car)
-
-    # if player_car.img.get_rect(topleft=(player_car.x, player_car.y)).colliderect(GARDEN):
-    #     print(f"collision no: {counter}")
-    #     counter += 1
-    #     player_car.bounce()
-
-    # finish_poi_collide = player_car.collide(FINISH_MASK, *FINISH_POSITION) 
-    # if finish_poi_collide != None:
-    #     if finish_poi_collide[1] == 0:
-    #         player_car.bounce()             # if the car hits the finish line from the top, bounce
-    #     else:
-    #         player_car.reset()
-    #         print("finish lap")
 
 
 pygame.quit()
