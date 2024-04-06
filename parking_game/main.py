@@ -47,12 +47,12 @@ parking_spots.pop(free_spot_index)
 PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
 PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
-spawn_rects = [pygame.Rect(10, 10, 650, 94), pygame.Rect(10, 566, 650, 94), pygame.Rect(10, 184, 25, 382), pygame.Rect(635, 184, 25, 382)]
+spawn_rects = [pygame.Rect(2, 2, 633, 77), pygame.Rect(2, 558, 633, 77), pygame.Rect(2, 79, 8, 479), pygame.Rect(635, 79, 8, 479)]
 car_spawn_index = random.randint(0, 3)
 # I want to randomly select a point (x,y) from the spawn_rects[car_spawn_index] rectangle, so that the car does not spawn on the garden or the parking spots
-player_car_spawn = spawn_rects[car_spawn_index]
-player_car_spawn.x += random.randint(0, player_car_spawn.width)
-player_car_spawn.y += random.randint(0, player_car_spawn.height)
+car_spawn = spawn_rects[car_spawn_index]
+car_spawn.x += random.randint(0, car_spawn.width)
+car_spawn.y += random.randint(0, car_spawn.height)
 
 class AbstractCar:
     def __init__(self, max_vel, rotation_vel):
@@ -61,9 +61,17 @@ class AbstractCar:
         self.vel = 0
         self.rotation_vel = rotation_vel
         self.angle = random.randint(0, 360)
-        self.x, self.y = self.START_POS
+        self.x, self.y = self.calculate_START_POS()
         self.acceleration = 0.1
         self.last_x, self.last_y = self.x, self.y
+        self.start = True
+
+    def calculate_START_POS(self):       
+        rotated_image = pygame.transform.rotate(self.img, self.angle)
+        new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft= self.NEW_RECT_START_POS).center)
+        new_rect.topleft = self.NEW_RECT_START_POS
+
+        return new_rect.x + new_rect.width / 2 - self.img.get_width() / 2, new_rect.y + new_rect.height / 2 - self.img.get_height() / 2
 
     def rotate(self, left=False, right=False):
         if abs(self.vel) > 0:        # if the car is moving, it can rotate
@@ -74,6 +82,9 @@ class AbstractCar:
 
     def draw(self):
         new_img = self.rotate_center()
+        pygame.draw.rect(WIN, (0, 0, 0), new_img[1])                    # draw the new_rect rectangle around the car
+        pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
+        pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
         if self.collide(new_img[1], new_img[2]):
             self.bounce()
@@ -182,7 +193,7 @@ class AbstractCar:
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR
-    START_POS = (player_car_spawn.x, player_car_spawn.y)
+    NEW_RECT_START_POS = (car_spawn.x, car_spawn.y)
 
     def move_player(self):
         keys = pygame.key.get_pressed()
@@ -207,9 +218,7 @@ def draw_window(player_car):
     WIN.blit(PARKING_LOT, (0, 0))
 
     for index, spot in parking_spots.items():
-        #  pygame.draw.rect(WIN, (255, 255, 0), spot[0])
         WIN.blit(spot[1], (spot[2], spot[3]))
-   
         
     player_car.draw()
 
@@ -220,6 +229,7 @@ run = True
 clock = pygame.time.Clock()
 FPS = 20
 player_car = PlayerCar(8, 1)
+
 
 while run:
     clock.tick(FPS)
