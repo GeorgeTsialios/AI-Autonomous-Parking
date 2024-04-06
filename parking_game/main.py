@@ -47,11 +47,10 @@ parking_spots.pop(free_spot_index)
 PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
 PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
-spawn_rects = [pygame.Rect(2, 2, 633, 77), pygame.Rect(2, 558, 633, 77), pygame.Rect(2, 79, 8, 479), pygame.Rect(635, 79, 8, 479)]
+spawn_rects = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
 car_spawn_index = random.randint(0, 3)
-# I want to randomly select a point (x,y) from the spawn_rects[car_spawn_index] rectangle, so that the car does not spawn on the garden or the parking spots
 car_spawn = spawn_rects[car_spawn_index]
-car_spawn.x += random.randint(0, car_spawn.width)
+car_spawn.x += random.randint(0, car_spawn.width)               # randomize the spawn position of the player car
 car_spawn.y += random.randint(0, car_spawn.height)
 
 class AbstractCar:
@@ -72,13 +71,6 @@ class AbstractCar:
         new_rect.topleft = self.NEW_RECT_START_POS
 
         return new_rect.x + new_rect.width / 2 - self.img.get_width() / 2, new_rect.y + new_rect.height / 2 - self.img.get_height() / 2
-
-    def rotate(self, left=False, right=False):
-        if abs(self.vel) > 0:        # if the car is moving, it can rotate
-            if left:
-                self.angle += self.rotation_vel * self.vel
-            elif right:
-                self.angle -= self.rotation_vel * self.vel
 
     def draw(self):
         new_img = self.rotate_center()
@@ -101,6 +93,8 @@ class AbstractCar:
         rotated_image = pygame.transform.rotate(self.img, self.angle)
         new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft=(self.x, self.y)).center)
         new_mask = pygame.mask.from_surface(rotated_image)      # create a new mask for the rotated image. This is necessary for pixel perfect collision detection.
+        # print(f"New_rect x: {new_rect.x}, y: {new_rect.y}")
+        # print(f"Car spawn: {car_spawn.x}, {car_spawn.y}")
         return rotated_image, new_rect, new_mask
     
     def collide(self, new_rect, new_mask):
@@ -148,8 +142,8 @@ class AbstractCar:
         '''
         print(f"{self.vel:.2f}")
         self.vel = -self.vel                            # reverse the direction of the car, so that it exits from colliding 
-        # if self.vel == 0:         # this was used for when the car was stuck colliding while having velocity = 0, the game would crash
-        #     self.vel = -0.1       # however I think this is not necessary anymore, because the car will always have a velocity different from 0 (you can not press the up arrow key and the down arrow key at the same time)
+        if self.vel == 0:         # this was used for when the car was stuck colliding while having velocity = 0, the game would crash
+             self.vel = -0.1       # however I think this is not necessary anymore, because the car will always have a velocity different from 0 (you can not press the up arrow key and the down arrow key at the same time)
         counter = 0
         while True:
             print(f"{self.vel:.2f}")
@@ -161,6 +155,13 @@ class AbstractCar:
             if not self.collide(new_img[1], new_img[2]) and (self.x, self.y) != (self.last_x, self.last_y):     # the 2nd condition is necessary, because the car would be stuck in an infinite loop when it was colliding with the object in 2 adjacent points, around one safe point. This would happen when the car was turning around the edges of the parking spots. It would collide with the parking spot in one point, then return to the safe point and when it moved in the opposite direction, it would collide in the 2nd point and return to the safe point again. This would repeat indefinitely.
                 break
         self.vel = 0
+
+    def rotate(self, left=False, right=False):
+        if abs(self.vel) > 0:        # if the car is moving, it can rotate
+            if left:
+                self.angle += self.rotation_vel * self.vel
+            elif right:
+                self.angle -= self.rotation_vel * self.vel
 
     def move_forward(self):
         self.vel = min(self.vel + self.acceleration, self.max_vel)
@@ -177,11 +178,6 @@ class AbstractCar:
 
         self.y -= vertical_distance
         self.x -= horizontal_distance
-
-    def reset(self):
-        self.x, self.y = self.START_POS
-        self.angle = 0
-        self.vel = 0
     
     def reduce_speed(self):
         if self.vel > 0:
@@ -189,6 +185,11 @@ class AbstractCar:
         else:
             self.vel = min(self.vel + self.acceleration / 2, 0)
         self.move()
+
+    def reset(self):
+        self.x, self.y = self.calculate_START_POS()
+        self.angle = 0
+        self.vel = 0
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
