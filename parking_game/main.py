@@ -1,8 +1,8 @@
 # This is going to be a parking game where the player has to park the car in the parking lot. The player car will be controlled by the arrow keys.
 # The cars' movement should resemble closely real-life physics in terms of acceleration, deceleration, and turning.
-# There will be 10 parking spots, but only one available for the player, while the rest will be occupied by other cars. The available parking spot 
-# will contain a rectangle, which will turn green once the player parks the car inside it. The available parking spot will be randomly chosen at the
-# beginning of each game. Also, the player car will spawn at a random position at the beginning of each game.
+# There will be 10 parking spots, but only one free for the player, while the rest will be occupied by other cars. The free parking spot 
+# will contain a rectangle, which will turn green once the player parks the car inside it (aka once the car is stationary inside it for 2 seconds).
+# The free parking spot will be randomly chosen at the beginning of each game. Also, the player car will spawn at a random position at the beginning of each game.
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
 # in the middle part of the parking lot).
 
@@ -10,6 +10,8 @@ import pygame
 import time
 import math
 import random
+
+# random.seed(4)
 
 def scale_image(img, factor):
     size = round(img.get_width() * factor), round(img.get_height() * factor)        # size is a tuple of 2 integers, the new width and height of the image
@@ -58,6 +60,13 @@ free_spot_index = random.randint(1, 10)
 print(f"Free spot: {free_spot_index}")
 parking_spots.pop(free_spot_index)
 
+spot_rectangles = [pygame.Rect(140.83, 201.5, 75, 100), pygame.Rect(239.16, 201.5, 75, 100), pygame.Rect(337.49, 201.5, 75, 100), pygame.Rect(435.82, 201.5, 75, 100), pygame.Rect(534.15, 201.5, 75, 100), pygame.Rect(140.83, 448.5, 75, 100), pygame.Rect(239.16, 448.5, 75, 100), pygame.Rect(337.49, 448.5, 75, 100), pygame.Rect(435.82, 448.5, 75, 100), pygame.Rect(534.15, 448.5, 75, 100)]
+
+free_spot_rect = spot_rectangles[free_spot_index - 1]     # the rectangle that will turn green when the player parks the car inside it
+free_spot_color = (255, 0, 0)      
+FREE_SPOT_BORDER = pygame.image.load(f"parking_game/imgs/free-spot-border-{free_spot_index}.png")       
+FREE_SPOT_BORDER_MASK = pygame.mask.from_surface(FREE_SPOT_BORDER)              
+
 PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
 PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
@@ -88,17 +97,22 @@ class AbstractCar:
 
     def draw(self):
         new_img = self.rotate_center()
-        pygame.draw.rect(WIN, (0, 0, 0), new_img[1])                    # draw the new_rect rectangle around the car
-        pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
-        pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
+        # pygame.draw.rect(WIN, (0, 0, 0), new_img[1])                    # draw the new_rect rectangle around the car
+        # pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
+        # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
-        if self.collide(new_img[1], new_img[2]):
+        if self.collide_map(new_img[1], new_img[2]):
             self.bounce()
         else:
              self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
         if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, reset it
             print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
             self.reset()
+        global free_spot_color
+        if self.collide_free_spot(new_img[1], new_img[2]):
+            free_spot_color = (0, 255, 0)
+        else:
+            free_spot_color = (255, 0, 0)
     
     def rotate_center(self):
         '''
@@ -111,7 +125,7 @@ class AbstractCar:
         # print(f"Car spawn: {car_spawn.x}, {car_spawn.y}")
         return rotated_image, new_rect, new_mask
     
-    def collide(self, new_rect, new_mask):
+    def collide_map(self, new_rect, new_mask):
         offset = (int(new_rect.x), int(new_rect.y))     # offset is the difference between the top left corner of the car image and the top left corner of the window (border mask)
         
         if new_rect.colliderect(GARDEN):                # colliderect() is less computanionally expensive than pixel perfect collision detection using masks. That's why we first check if the rectangles collide.
@@ -147,6 +161,13 @@ class AbstractCar:
                     return True
         return False
 
+    def collide_free_spot(self, new_rect, new_mask):
+        offset = (int(new_rect.x), int(new_rect.y))
+        if new_rect.colliderect(free_spot_rect):
+            if FREE_SPOT_BORDER_MASK.overlap(new_mask, offset) is None:
+                return True
+        return False
+
     def bounce(self):
         '''
         This method tries to move the car away from the object it is colliding with.
@@ -166,7 +187,7 @@ class AbstractCar:
                 self.vel = -self.vel
             self.move()
             new_img = self.rotate_center()
-            if not self.collide(new_img[1], new_img[2]) and (self.x, self.y) != (self.last_x, self.last_y):     # the 2nd condition is necessary, because the car would be stuck in an infinite loop when it was colliding with the object in 2 adjacent points, around one safe point. This would happen when the car was turning around the edges of the parking spots. It would collide with the parking spot in one point, then return to the safe point and when it moved in the opposite direction, it would collide in the 2nd point and return to the safe point again. This would repeat indefinitely.
+            if not self.collide_map(new_img[1], new_img[2]) and (self.x, self.y) != (self.last_x, self.last_y):     # the 2nd condition is necessary, because the car would be stuck in an infinite loop when it was colliding with the object in 2 adjacent points, around one safe point. This would happen when the car was turning around the edges of the parking spots. It would collide with the parking spot in one point, then return to the safe point and when it moved in the opposite direction, it would collide in the 2nd point and return to the safe point again. This would repeat indefinitely.
                 break
         self.vel = 0
 
@@ -234,6 +255,8 @@ def draw_window(player_car):
 
     for index, spot in parking_spots.items():
         WIN.blit(spot[1], (spot[2], spot[3]))
+    
+    pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
         
     player_car.draw()
 
