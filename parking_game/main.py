@@ -1,7 +1,7 @@
 # This is going to be a parking game where the player has to park the car in the parking lot. The player car will be controlled by the arrow keys.
 # The cars' movement should resemble closely real-life physics in terms of acceleration, deceleration, and turning.
 # There will be 10 parking spots, but only one free for the player, while the rest will be occupied by other cars. The free parking spot 
-# will contain a rectangle, which will turn green once the player parks the car inside it (aka once the car is stationary inside it for 2 seconds).
+# will contain a rectangle, which will turn green once the player places the car inside it. The game stops once the car is stationary inside it for 2 seconds.
 # The free parking spot will be randomly chosen at the beginning of each game. Also, the player car will spawn at a random position at the beginning of each game.
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
 # in the middle part of the parking lot).
@@ -111,28 +111,12 @@ class AbstractCar:
         return new_rect.x + new_rect.width / 2 - self.img.get_width() / 2, new_rect.y + new_rect.height / 2 - self.img.get_height() / 2
 
     def draw(self):
+        global new_img
         new_img = self.rotate_center()
         # pygame.draw.rect(WIN, (0, 0, 0), new_img[1])                    # draw the new_rect rectangle around the car
         # pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
         # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
-        if self.collide_map(new_img[1], new_img[2]):
-            collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
-            # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
-            collision_sound.play()
-            self.bounce()
-        else:
-             self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
-        if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, reset it
-            print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
-            self.reset()
-        global free_spot_color
-        if self.collide_free_spot(new_img[1], new_img[2]):
-            if free_spot_color == (255, 0, 0):         # if the color was red before, this means that the car was not parked inside the free spot, so we play the sound again
-                green_sound.play()
-            free_spot_color = (0, 255, 0)
-        else:
-            free_spot_color = (255, 0, 0)
     
     def rotate_center(self):
         '''
@@ -144,6 +128,26 @@ class AbstractCar:
         # print(f"New_rect x: {new_rect.x}, y: {new_rect.y}")
         # print(f"Car spawn: {car_spawn.x}, {car_spawn.y}")
         return rotated_image, new_rect, new_mask
+    
+    def check_collision(self):
+        if self.collide_map(new_img[1], new_img[2]):
+            collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
+            # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
+            collision_sound.play()
+            pygame.display.update()
+            self.bounce()
+        else:
+             self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
+        if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, reset it
+            print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
+            self.reset()
+        global free_spot_color
+        if self.collide_free_spot(new_img[1], new_img[2]):
+            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so we play the sound
+                green_sound.play()
+            free_spot_color = (0, 255, 0)
+        else:
+            free_spot_color = (255, 0, 0)
     
     def collide_map(self, new_rect, new_mask):
         offset = (int(new_rect.x), int(new_rect.y))     # offset is the difference between the top left corner of the car image and the top left corner of the window (border mask)
@@ -287,6 +291,7 @@ run = True
 clock = pygame.time.Clock()
 FPS = 20
 player_car = PlayerCar(8, 1)
+new_img = None
 
 
 while run:
@@ -299,6 +304,7 @@ while run:
 
     player_car.move_player()
     draw_window(player_car)
+    player_car.check_collision()
 
 
 pygame.quit()
