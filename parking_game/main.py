@@ -138,14 +138,26 @@ class AbstractCar:
             self.bounce()
         else:
              self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
+        
         if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, reset it
             print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
             self.reset()
+
         global free_spot_color
+        global run
+        global start_time
+
         if self.collide_free_spot(new_img[1], new_img[2]):
             if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so we play the sound
                 green_sound.play()
             free_spot_color = (0, 255, 0)
+            if self.vel == 0:
+                if start_time is None:
+                    start_time = time.time()
+                elif  time.time() - start_time >= 2:
+                    run = False
+            else:
+                start_time = None
         else:
             free_spot_color = (255, 0, 0)
     
@@ -292,6 +304,7 @@ clock = pygame.time.Clock()
 FPS = 20
 player_car = PlayerCar(8, 1)
 new_img = None
+start_time = None
 
 
 while run:
