@@ -13,6 +13,21 @@ import random
 
 # random.seed(4)
 
+pygame.mixer.init()
+
+music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
+pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+pygame.mixer.music.set_volume(0.05)
+
+collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
+
+start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
+start_up_sound.set_volume(0.2)
+start_up_sound.play()
+
+green_sound = pygame.mixer.Sound("parking_game/sounds/success-bell-6776_8ODfLqon.wav")
+green_sound.set_volume(0.1)
+
 def scale_image(img, factor):
     size = round(img.get_width() * factor), round(img.get_height() * factor)        # size is a tuple of 2 integers, the new width and height of the image
     return pygame.transform.scale(img, size)  
@@ -102,6 +117,9 @@ class AbstractCar:
         # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
         if self.collide_map(new_img[1], new_img[2]):
+            collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
+            # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
+            collision_sound.play()
             self.bounce()
         else:
              self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
@@ -110,6 +128,8 @@ class AbstractCar:
             self.reset()
         global free_spot_color
         if self.collide_free_spot(new_img[1], new_img[2]):
+            if free_spot_color == (255, 0, 0):         # if the color was red before, this means that the car was not parked inside the free spot, so we play the sound again
+                green_sound.play()
             free_spot_color = (0, 255, 0)
         else:
             free_spot_color = (255, 0, 0)
