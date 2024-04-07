@@ -1,7 +1,7 @@
 # This is going to be a parking game where the player has to park the car in the parking lot. The player car will be controlled by the arrow keys.
 # The cars' movement should resemble closely real-life physics in terms of acceleration, deceleration, and turning.
 # There will be 10 parking spots, but only one free for the player, while the rest will be occupied by other cars. The free parking spot 
-# will contain a rectangle, which will turn green once the player places the car inside it. The game stops once the car is stationary inside it for 2 seconds.
+# will contain a rectangle, which will turn green once the player places the car inside it. The game return_to_maps once the car is stationary inside it for 2 seconds.
 # The free parking spot will be randomly chosen at the beginning of each game. Also, the player car will spawn at a random position at the beginning of each game.
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
 # in the middle part of the parking lot).
@@ -75,9 +75,9 @@ free_spot_index = random.randint(1, 10)
 print(f"Free spot: {free_spot_index}")
 parking_spots.pop(free_spot_index)
 
-spot_rectangles = [pygame.Rect(140.83, 201.5, 75, 100), pygame.Rect(239.16, 201.5, 75, 100), pygame.Rect(337.49, 201.5, 75, 100), pygame.Rect(435.82, 201.5, 75, 100), pygame.Rect(534.15, 201.5, 75, 100), pygame.Rect(140.83, 448.5, 75, 100), pygame.Rect(239.16, 448.5, 75, 100), pygame.Rect(337.49, 448.5, 75, 100), pygame.Rect(435.82, 448.5, 75, 100), pygame.Rect(534.15, 448.5, 75, 100)]
+SPOT_RECTANGLES = [pygame.Rect(140.83, 201.5, 75, 100), pygame.Rect(239.16, 201.5, 75, 100), pygame.Rect(337.49, 201.5, 75, 100), pygame.Rect(435.82, 201.5, 75, 100), pygame.Rect(534.15, 201.5, 75, 100), pygame.Rect(140.83, 448.5, 75, 100), pygame.Rect(239.16, 448.5, 75, 100), pygame.Rect(337.49, 448.5, 75, 100), pygame.Rect(435.82, 448.5, 75, 100), pygame.Rect(534.15, 448.5, 75, 100)]
 
-free_spot_rect = spot_rectangles[free_spot_index - 1]     # the rectangle that will turn green when the player parks the car inside it
+free_spot_rect = SPOT_RECTANGLES[free_spot_index - 1]     # the rectangle that will turn green when the player parks the car inside it
 free_spot_color = (255, 0, 0)      
 FREE_SPOT_BORDER = pygame.image.load(f"parking_game/imgs/free-spot-border-{free_spot_index}.png")       
 FREE_SPOT_BORDER_MASK = pygame.mask.from_surface(FREE_SPOT_BORDER)              
@@ -85,11 +85,7 @@ FREE_SPOT_BORDER_MASK = pygame.mask.from_surface(FREE_SPOT_BORDER)
 PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
 PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
-spawn_rects = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
-car_spawn_index = random.randint(0, 3)
-car_spawn = spawn_rects[car_spawn_index]
-car_spawn.x += random.randint(0, car_spawn.width)               # randomize the spawn position of the player car
-car_spawn.y += random.randint(0, car_spawn.height)
+
 
 class AbstractCar:
     def __init__(self, max_vel, rotation_vel):
@@ -101,12 +97,18 @@ class AbstractCar:
         self.x, self.y = self.calculate_START_POS()
         self.acceleration = 0.1
         self.last_x, self.last_y = self.x, self.y
-        self.start = True
 
     def calculate_START_POS(self):       
+        SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
+        car_spawn_index = random.randint(0, 3)
+        car_spawn = SPAWN_RECTS[car_spawn_index]
+        car_spawn.x += random.randint(0, car_spawn.width)               # randomize the spawn position of the player car
+        car_spawn.y += random.randint(0, car_spawn.height)
+        print(f"Car spawn: {car_spawn.x}, {car_spawn.y}")
         rotated_image = pygame.transform.rotate(self.img, self.angle)
-        new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft= self.NEW_RECT_START_POS).center)
-        new_rect.topleft = self.NEW_RECT_START_POS
+        new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft= (car_spawn.x, car_spawn.y)).center)
+        new_rect.topleft = (car_spawn.x, car_spawn.y)
+        print(f"New_rect x: {new_rect.x}, y: {new_rect.y}")
 
         return new_rect.x + new_rect.width / 2 - self.img.get_width() / 2, new_rect.y + new_rect.height / 2 - self.img.get_height() / 2
 
@@ -139,25 +141,25 @@ class AbstractCar:
         else:
              self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
         
-        if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, reset it
+        if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, return_to_map it
             print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
-            self.reset()
+            self.return_to_map()
 
         global free_spot_color
         global run
         global start_time
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so we play the sound
+            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
                 green_sound.play()
             free_spot_color = (0, 255, 0)
-            if self.vel == 0:
-                if start_time is None:
+            if self.vel == 0:                          # if the car is stationary in the spot
+                if start_time is None:                 # if it just parked, start the timer
                     start_time = time.time()
-                elif  time.time() - start_time >= 2:
-                    run = False
+                elif  time.time() - start_time >= 2:   # else if the car has been stationary for 2 seconds, stop the game
+                    self.return_to_map()
             else:
-                start_time = None
+                start_time = None                      # if the car is not stationary, return_to_map the timer
         else:
             free_spot_color = (255, 0, 0)
     
@@ -257,15 +259,20 @@ class AbstractCar:
             self.vel = min(self.vel + self.acceleration / 2, 0)
         self.move()
 
-    def reset(self):
-        self.x, self.y = self.calculate_START_POS()
-        self.angle = 0
+    def return_to_map(self):
+        self.img = self.IMG
         self.vel = 0
+        self.angle = random.randint(0, 360)
+        self.x, self.y = self.calculate_START_POS()
+        self.last_x, self.last_y = self.x, self.y
+
+    # def reset(self):
+    #     self.return_to_map()
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR
-    NEW_RECT_START_POS = (car_spawn.x, car_spawn.y)
+    # NEW_RECT_START_POS = (car_spawn.x, car_spawn.y)
 
     def move_player(self):
         keys = pygame.key.get_pressed()
