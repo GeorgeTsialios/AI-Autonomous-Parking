@@ -59,6 +59,7 @@ cars = [YELLOW_CAR, PINK_CAR, GREEN_CAR, PURPLE_CAR,]     # flip() is used to fl
 
 free_spot_color = (255, 0, 0, 255)      
 parking_spots = {}
+intersection = None
 free_spot_rect = None
 FREE_SPOT_BORDER_MASK = None
 PARKING_LOT_BORDER_MASK = None
@@ -144,20 +145,24 @@ class AbstractCar:
     
     def check_collision(self):
         global new_img
+        global intersection
         new_img = self.rotate_center()
 
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
             # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
             collision_sound.play()
-            pygame.display.update()
+            # pygame.display.update()
             self.bounce()
         
         elif new_img[1].x < 0 or new_img[1].x > WIN_WIDTH or new_img[1].y < 0 or new_img[1].y > WIN_HEIGHT:       # if the car goes out of the window, return_to_map it
             print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
+            intersection =  None
             self.return_to_map()
+
         else:
              self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
+             intersection = None
 
         global free_spot_color
         global run
@@ -178,28 +183,32 @@ class AbstractCar:
             free_spot_color = (255, 0, 0)
     
     def collide_map(self, new_rect, new_mask):
+        global intersection
         offset = (int(new_rect.x), int(new_rect.y))     # offset is the difference between the top left corner of the car image and the top left corner of the window (border mask)
         
         if new_rect.colliderect(GARDEN):                # colliderect() is less computanionally expensive than pixel perfect collision detection using masks. That's why we first check if the rectangles collide.
             # pygame.draw.rect(WIN, (0, 0, 0), new_rect)
             if GARDEN_BORDER_MASK.overlap(new_mask, offset) is not None:   # now we check for pixel perfect collision, because when the car is turning, the new_rect rectangle is bigger than the car image. This leads to false positive collision detetctions when the car is turning around the edges of the garden.
                 intersection = new_rect.clip(GARDEN)                       # returns a new rectangle that represents the intersection of the two rectangles.
-                pygame.draw.rect(WIN, (255, 0, 0), intersection)           # draw a red rectangle around the point of intersection
                 print(f"collision with garden")
                 return True
         elif new_rect.colliderect(TOP_RECT):
+                intersection = None
                 print(f"collision with top rect")
                 print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         elif new_rect.colliderect(BOTTOM_RECT):
+                intersection = None
                 print(f"collision with bottom rect")
                 print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         elif new_rect.colliderect(LEFT_RECT):
+                intersection = None
                 print(f"collision with left rect")
                 print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         elif new_rect.colliderect(RIGHT_RECT):
+                intersection = None
                 print(f"collision with right rect")
                 print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
@@ -207,7 +216,6 @@ class AbstractCar:
             if new_rect.colliderect(spot[0]):
                 if PARKING_LOT_BORDER_MASK.overlap(new_mask, offset) is not None: 
                     intersection = new_rect.clip(spot[0])
-                    pygame.draw.rect(WIN, (255, 0, 0), intersection)
                     print(f"collision with car {index}")
                     print(f"x: {new_rect.x}, y: {new_rect.y}")
                     return True
@@ -324,6 +332,8 @@ def draw_window(player_car):
     pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
         
     player_car.draw()
+    if intersection is not None:
+        pygame.draw.rect(WIN, (255, 0, 0), intersection)            # draw a red rectangle around the point of intersection
 
     pygame.display.update()
 
