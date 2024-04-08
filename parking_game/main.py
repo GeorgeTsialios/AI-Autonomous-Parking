@@ -16,21 +16,19 @@ import random
 pygame.mixer.init()
 
 music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
 pygame.mixer.music.set_volume(0.05)
-
 collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
-
 start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
 start_up_sound.set_volume(0.2)
-start_up_sound.play()
-
 green_sound = pygame.mixer.Sound("parking_game/sounds/success-bell-6776_8ODfLqon.wav")
 green_sound.set_volume(0.1)
+
 
 def scale_image(img, factor):
     size = round(img.get_width() * factor), round(img.get_height() * factor)        # size is a tuple of 2 integers, the new width and height of the image
     return pygame.transform.scale(img, size)  
+
 
 PARKING_LOT = pygame.image.load("parking_game/imgs/parking-lot.png")
 GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
@@ -43,11 +41,13 @@ PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink.png"), 40/1
 GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green.png"), 40/163)
 PURPLE_CAR = scale_image(pygame.image.load("parking_game/imgs/car-purple.png"), 40/164)
 
+
 GARDEN = pygame.Rect(125, 325, 500, 100)
-TOP_RECT = pygame.Rect(0, -5, 750, 5)
-BOTTOM_RECT = pygame.Rect(0, 750, 750, 5)
-LEFT_RECT = pygame.Rect(-5, 0, 5, 750)
-RIGHT_RECT = pygame.Rect(750, 0, 5, 750)
+TOP_RECT = pygame.Rect(0, -10, 750, 10)
+BOTTOM_RECT = pygame.Rect(0, 750, 750, 10)
+LEFT_RECT = pygame.Rect(-10, 0, 10, 750)
+RIGHT_RECT = pygame.Rect(750, 0, 10, 750)
+
 
 WIN_WIDTH, WIN_HEIGHT = PARKING_LOT.get_width(), PARKING_LOT.get_height()
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
@@ -55,36 +55,45 @@ pygame.display.set_caption("Parking Game!")
 
 CAR_WIDTH, CAR_HEIGHT = 40, 81.24
 cars = [YELLOW_CAR, PINK_CAR, GREEN_CAR, PURPLE_CAR,]     # flip() is used to flip the image vertically
-# parking_spots = {1: [pygame.Rect(158.33, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 158.33, 210.89], 2: [pygame.Rect(256.66, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 256.66, 210.89], 3: [pygame.Rect(354.99, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 354.99, 210.89], 4: [pygame.Rect(453.32, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 453.32, 210.89], 5: [pygame.Rect(551.65, 210.89, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 551.65, 210.89],
-#                  6: [pygame.Rect(158.33, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 158.33, 457.88], 7: [pygame.Rect(256.66, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 256.66, 457.88], 8: [pygame.Rect(354.99, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 354.99, 457.88], 9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 453.32, 457.88], 10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), random.choice(cars), 551.65, 457.88]}
 
-random.shuffle(cars)
-
-parking_spots = {1: [pygame.Rect(158.33, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[0], False, random.choice([True,False])), 158.33, 210.89],
-                 2: [pygame.Rect(256.66, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])),  256.66, 210.89],
-                 3: [pygame.Rect(354.99, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 354.99, 210.89],
-                 4: [pygame.Rect(453.32, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[1], False, random.choice([True,False])), 453.32, 210.89],
-                 5: [pygame.Rect(551.65, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 551.65, 210.89],
-                 6: [pygame.Rect(158.33, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 158.33, 457.88],
-                 7: [pygame.Rect(256.66, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[2], False, random.choice([True,False])), 256.66, 457.88],
-                 8: [pygame.Rect(354.99, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 354.99, 457.88],
-                 9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
-                 10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
-
-free_spot_index = random.randint(1, 10)
-print(f"Free spot: {free_spot_index}")
-parking_spots.pop(free_spot_index)
-
-SPOT_RECTANGLES = [pygame.Rect(140.83, 201.5, 75, 100), pygame.Rect(239.16, 201.5, 75, 100), pygame.Rect(337.49, 201.5, 75, 100), pygame.Rect(435.82, 201.5, 75, 100), pygame.Rect(534.15, 201.5, 75, 100), pygame.Rect(140.83, 448.5, 75, 100), pygame.Rect(239.16, 448.5, 75, 100), pygame.Rect(337.49, 448.5, 75, 100), pygame.Rect(435.82, 448.5, 75, 100), pygame.Rect(534.15, 448.5, 75, 100)]
-
-free_spot_rect = SPOT_RECTANGLES[free_spot_index - 1]     # the rectangle that will turn green when the player parks the car inside it
 free_spot_color = (255, 0, 0)      
-FREE_SPOT_BORDER = pygame.image.load(f"parking_game/imgs/free-spot-border-{free_spot_index}.png")       
-FREE_SPOT_BORDER_MASK = pygame.mask.from_surface(FREE_SPOT_BORDER)              
+parking_spots = {}
+free_spot_rect = None
+FREE_SPOT_BORDER_MASK = None
+PARKING_LOT_BORDER_MASK = None
 
-PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
-PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
+def initialize_game():
+    start_up_sound.play()
 
+    random.shuffle(cars)
+    global parking_spots
+    global free_spot_rect
+    global FREE_SPOT_BORDER_MASK
+    global PARKING_LOT_BORDER_MASK
+
+    parking_spots = {1: [pygame.Rect(158.33, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[0], False, random.choice([True,False])), 158.33, 210.89],
+                    2: [pygame.Rect(256.66, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])),  256.66, 210.89],
+                    3: [pygame.Rect(354.99, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 354.99, 210.89],
+                    4: [pygame.Rect(453.32, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[1], False, random.choice([True,False])), 453.32, 210.89],
+                    5: [pygame.Rect(551.65, 210.89, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 551.65, 210.89],
+                    6: [pygame.Rect(158.33, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 158.33, 457.88],
+                    7: [pygame.Rect(256.66, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[2], False, random.choice([True,False])), 256.66, 457.88],
+                    8: [pygame.Rect(354.99, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 354.99, 457.88],
+                    9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
+                    10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
+
+    free_spot_index = random.randint(1, 10)
+    print(f"Free spot: {free_spot_index}")
+    parking_spots.pop(free_spot_index)
+
+    SPOT_RECTANGLES = [pygame.Rect(140.83, 201.5, 75, 100), pygame.Rect(239.16, 201.5, 75, 100), pygame.Rect(337.49, 201.5, 75, 100), pygame.Rect(435.82, 201.5, 75, 100), pygame.Rect(534.15, 201.5, 75, 100), pygame.Rect(140.83, 448.5, 75, 100), pygame.Rect(239.16, 448.5, 75, 100), pygame.Rect(337.49, 448.5, 75, 100), pygame.Rect(435.82, 448.5, 75, 100), pygame.Rect(534.15, 448.5, 75, 100)]
+
+    free_spot_rect = SPOT_RECTANGLES[free_spot_index - 1]     # the rectangle that will turn green when the player parks the car inside it
+    FREE_SPOT_BORDER = pygame.image.load(f"parking_game/imgs/free-spot-border-{free_spot_index}.png")       
+    FREE_SPOT_BORDER_MASK = pygame.mask.from_surface(FREE_SPOT_BORDER)              
+
+    PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
+    PARKING_LOT_BORDER_MASK = pygame.mask.from_surface(PARKING_LOT_BORDER)
 
 
 class AbstractCar:
@@ -138,12 +147,12 @@ class AbstractCar:
             collision_sound.play()
             pygame.display.update()
             self.bounce()
-        else:
-             self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
         
-        if new_img[1].x < -self.max_vel or new_img[1].x > WIN_WIDTH + self.max_vel or new_img[1].y < -self.max_vel or new_img[1].y > WIN_HEIGHT + self.max_vel:       # if the car goes out of the window, return_to_map it
+        elif new_img[1].x < 0 or new_img[1].x > WIN_WIDTH or new_img[1].y < 0 or new_img[1].y > WIN_HEIGHT:       # if the car goes out of the window, return_to_map it
             print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
             self.return_to_map()
+        else:
+             self.last_x, self.last_y = self.x, self.y      # save the last, safe position of the car (where it does not collide with anything)
 
         global free_spot_color
         global run
@@ -157,7 +166,7 @@ class AbstractCar:
                 if start_time is None:                 # if it just parked, start the timer
                     start_time = time.time()
                 elif  time.time() - start_time >= 2:   # else if the car has been stationary for 2 seconds, stop the game
-                    self.return_to_map()
+                    self.reset()
             else:
                 start_time = None                      # if the car is not stationary, return_to_map the timer
         else:
@@ -266,8 +275,9 @@ class AbstractCar:
         self.x, self.y = self.calculate_START_POS()
         self.last_x, self.last_y = self.x, self.y
 
-    # def reset(self):
-    #     self.return_to_map()
+    def reset(self):
+        self.return_to_map()
+        initialize_game()
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
@@ -312,6 +322,7 @@ FPS = 20
 player_car = PlayerCar(8, 1)
 new_img = None
 start_time = None
+initialize_game()
 
 
 while run:
