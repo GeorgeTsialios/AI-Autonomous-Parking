@@ -1,10 +1,11 @@
 # This is going to be a parking game where the player has to park the car in the parking lot. The player car will be controlled by the arrow keys.
-# The cars' movement should resemble closely real-life physics in terms of acceleration, deceleration, and turning.
+# The car's movement should resemble closely real-life physics in terms of acceleration, deceleration, and turning.
 # There will be 10 parking spots, but only one free for the player, while the rest will be occupied by other cars. The free parking spot 
-# will contain a rectangle, which will turn green once the player places the car inside it. The game return_to_maps once the car is stationary inside it for 2 seconds.
+# will contain a rectangle, which will turn green once the player places the car inside it. The game resets once the car is stationary inside it for 2 seconds.
 # The free parking spot will be randomly chosen at the beginning of each game. Also, the player car will spawn at a random position at the beginning of each game.
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
-# in the middle part of the parking lot).
+# in the middle part of the parking lot). The car will have 8 depth sensors (radars), which will detect the distance to the nearest object (or window borders) in 8 directions.
+# The radars will be drawn on the screen as lines.
 
 import pygame
 import time
@@ -56,7 +57,7 @@ pygame.display.set_caption("Parking Game!")
 CAR_WIDTH, CAR_HEIGHT = 40, 81.24
 cars = [YELLOW_CAR, PINK_CAR, GREEN_CAR, PURPLE_CAR,]     # flip() is used to flip the image vertically
 
-free_spot_color = (255, 0, 0)      
+free_spot_color = (255, 0, 0, 255)      
 parking_spots = {}
 free_spot_rect = None
 FREE_SPOT_BORDER_MASK = None
@@ -106,6 +107,7 @@ class AbstractCar:
         self.x, self.y = self.calculate_START_POS()
         self.acceleration = 0.1
         self.last_x, self.last_y = self.x, self.y
+        self.radars = []
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
@@ -123,11 +125,11 @@ class AbstractCar:
 
     def draw(self):
         global new_img
-        new_img = self.rotate_center()
         # pygame.draw.rect(WIN, (0, 0, 0), new_img[1])                    # draw the new_rect rectangle around the car
         # pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
         # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
+        # pygame.draw.circle(WIN, (0, 255, 0), (new_img[1].x + new_img[1].width // 2, new_img[1].y + new_img[1].height // 2), 5)       # draw the center of the car with green color
     
     def rotate_center(self):
         '''
@@ -141,6 +143,9 @@ class AbstractCar:
         return rotated_image, new_rect, new_mask
     
     def check_collision(self):
+        global new_img
+        new_img = self.rotate_center()
+
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
             # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
@@ -279,6 +284,13 @@ class AbstractCar:
         self.return_to_map()
         initialize_game()
 
+    def draw_radars(self, screen):
+            # Optionally Draw All Sensors / Radars
+            for radar in self.radars:
+                position = radar[0]
+                pygame.draw.line(screen, (0, 255, 0), self.center, position, 1)
+                pygame.draw.circle(screen, (0, 255, 0), position, 5)
+
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR
@@ -334,8 +346,8 @@ while run:
             break
 
     player_car.move_player()
-    draw_window(player_car)
     player_car.check_collision()
+    draw_window(player_car)
 
 
 pygame.quit()
