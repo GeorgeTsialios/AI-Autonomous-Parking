@@ -311,7 +311,7 @@ class AbstractCar:
             x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * length)
             y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * length)
 
-            while length < 100:
+            while length < 200:
                 test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * (length + 1))
                 test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * (length + 1))
                 if game_map.get_at((test_x, test_y)) != 0:
@@ -329,24 +329,40 @@ class AbstractCar:
 
     def check_radars(self, game_map):
         degree = 0
+        step_size = 20
         for i in range(8):
+            collide = False
             length = self.radars[i][1] 
             
             x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * length)   # the previous length of the radar
             y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * length)
 
-            if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((x, y)) == 0:
-                while length < 100:        # if the radar is not colliding with anything, increase its length until it gets to 100 or collides with something
-                    # print(f"Radar {i} color: ", game_map.get_at((x, y)))
-                    # length = length + 1
-                    test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * (length + 1))
-                    test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * (length + 1))
-                    if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((test_x, test_y)) != 0:
+            if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((x, y)) == 0:  # if the radar is not colliding with an object at its length point
+                # we need to check some previous points (with step size = 20), to check if the radar is colliding with an object at a closer distance
+                test_length = length
+                while test_length - step_size > 0:
+                    test_length = test_length - step_size
+                    test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * test_length)
+                    test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * test_length)
+                    if (test_x > 0 and test_x < 750) and (test_y > 0 and test_y < 750) and game_map.get_at((test_x, test_y)) != 0:
+                        length = test_length
+                        collide = True
                         break
-                    length = length + 1
-                    x = test_x
-                    y = test_y
+                if not collide:        # if the radar is not colliding with anything, increase its length until it gets to 100 or collides with something     
+                    while length < 200:        
+                        # print(f"Radar {i} color: ", game_map.get_at((x, y)))
+                        # length = length + 1
+                        test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * (length + 1))
+                        test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * (length + 1))
+                        if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((test_x, test_y)) != 0:
+                            break
+                        length = length + 1
+                        x = test_x
+                        y = test_y
             else:
+                collide = True
+
+            if collide:         # if the radar is colliding with something, decrease its length until it gets to 0 or stops colliding with something
                 while length > 0:          # if the radar is colliding with something, decrease its length until it gets to 0 or stops colliding with something
                     # print(f"Radar {i} color: ", game_map.get_at((x, y)))
                     length = length - 1
@@ -400,9 +416,9 @@ def draw_window(player_car):
 
 run = True
 clock = pygame.time.Clock()
-FPS = 15
+FPS = 20
 initialize_game()
-player_car = PlayerCar(10, 1)
+player_car = PlayerCar(6, 1)
 new_img = None
 start_time = None
 
