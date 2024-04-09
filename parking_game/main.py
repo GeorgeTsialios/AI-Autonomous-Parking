@@ -110,11 +110,7 @@ class AbstractCar:
         self.acceleration = 0.1
         self.last_x, self.last_y = self.x, self.y
         self.rotate_center()
-        self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
         self.initialize_radars(PARKING_LOT_BORDER_MASK)
-        # print the radars
-        for radar in self.radars:
-            print(radar)
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
@@ -303,8 +299,10 @@ class AbstractCar:
     def reset(self):
         self.return_to_map()
         initialize_game()
+        self.initialize_radars(PARKING_LOT_BORDER_MASK)
 
     def initialize_radars(self, game_map):
+        self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
         degree = 0
         for i in range(8):
             length = 0
@@ -315,9 +313,7 @@ class AbstractCar:
                 test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * (length + 1))
                 test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * (length + 1))
                 if game_map.get_at((test_x, test_y)) != 0:
-                    print(f"Radar {i} color: ", game_map.get_at((test_x, test_y)))
                     break
-                print(f"Radar {i} color: ", game_map.get_at((test_x, test_y)))
                 length = length + 1
                 x = test_x
                 y = test_y
