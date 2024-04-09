@@ -37,11 +37,11 @@ GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
 
 
 RED_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-red-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-red-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
-YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/car-yellow.png"), 40/162)       # this way all cars have the same width (40px) 
-PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink.png"), 40/162)
+YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/car-yellow-wheels.png"), 40/162)       # this way all cars have the same width (40px) 
+PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink-wheels.png"), 40/162)
 # GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green.png"), 40/163)
-GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green-new.png"), 40/127)
-PURPLE_CAR = scale_image(pygame.image.load("parking_game/imgs/car-purple.png"), 40/164)
+GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green-new-wheels.png"), 40/127)
+PURPLE_CAR = scale_image(pygame.image.load("parking_game/imgs/car-purple-wheels.png"), 40/164)
 
 
 GARDEN = pygame.Rect(125, 325, 500, 100)
