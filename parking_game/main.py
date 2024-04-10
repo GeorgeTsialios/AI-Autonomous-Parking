@@ -294,7 +294,6 @@ class AbstractCar:
         self.angle = random.randint(0, 360)
         self.x, self.y = self.calculate_START_POS()
         self.last_x, self.last_y = self.x, self.y
-        self.radars = self.initialize_radars(PARKING_LOT_BORDER_MASK)
 
     def reset(self):
         self.return_to_map()
@@ -374,7 +373,6 @@ class AbstractCar:
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR[0]
-    # NEW_RECT_START_POS = (car_spawn.x, car_spawn.y)
 
     def move_player(self):
         keys = pygame.key.get_pressed()
