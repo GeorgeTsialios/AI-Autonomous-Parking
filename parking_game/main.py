@@ -100,11 +100,10 @@ def initialize_game():
 
 
 class AbstractCar:
-    def __init__(self, max_vel, rotation_vel):
+    def __init__(self, max_vel):
         self.img = self.IMG
         self.max_vel = max_vel
         self.vel = 0
-        self.rotation_vel = rotation_vel
         self.angle = random.randint(0, 360)
         self.x, self.y = self.calculate_START_POS()
         self.acceleration = 0.1
@@ -257,18 +256,19 @@ class AbstractCar:
         self.vel = 0
 
     def rotate(self, left=False, right=False):
-        if abs(self.vel) > 0:        # if the car is moving, it can rotate
+        if abs(self.vel) > 0:        # if the car is moving, it can rotate.
+            turning_factor = 0.85 if self.vel <= self.max_vel * 2/3 else 0.5     # the turning factor depends on the velocity of the car. The higher the velocity, the less the car will turn. This is because the car has inertia and it is harder to turn it when it is moving faster.  
             if left:
-                self.angle += self.rotation_vel * self.vel
+                self.angle += turning_factor * self.vel              # When turning, the angle of the car changes depending on its velocity. The higher the velocity, the more the angle changes.
             elif right:
-                self.angle -= self.rotation_vel * self.vel
+                self.angle -= turning_factor * self.vel
 
     def move_forward(self):
         self.vel = min(self.vel + self.acceleration, self.max_vel)
         self.move()
 
     def move_backward(self):    # move backward with half the max speed
-        self.vel = max(self.vel - self.acceleration, -self.max_vel/2)   # max because these are negative values, we are still choosing the lower speed
+        self.vel = max(self.vel - self.acceleration, -self.max_vel * 2/3)   # max because these are negative values, we are still choosing the lower speed
         self.move()
 
     def move(self):
@@ -304,8 +304,8 @@ class AbstractCar:
         # degrees = [0, 45, 90, 135, 180, 225, 270, 315]
         step_size = 20
         for i in range(8):
-            length = 30 if degrees[i] % 45 == 0 else 45
-            offset = 25 if degrees[i] % 45 == 0 else 40
+            length = 30 if degrees[i] % 45 == 0 else 45                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
+            offset = 25 if degrees[i] % 45 == 0 else 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
             collide = False
 
             while True:
@@ -316,11 +316,11 @@ class AbstractCar:
                     break
                 x = test_x
                 y = test_y
-                if length + step_size > 245:
+                if length + step_size > 245:        # so that we achieve a max distance of 205
                     break
                 length = length + step_size
             
-            if collide:
+            if collide:                             # if the radar collides with an object, we move it back by 1 repeatedly, until it is no longer colliding
                 while length > 0:
                     length = length - 1
                     x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degrees[i]))) * length)
@@ -328,10 +328,9 @@ class AbstractCar:
                     if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((x, y)) == 0:
                         break
 
-            # Calculate Distance To Border And Append To Radars List
             # dist = round(math.sqrt(math.pow(x - self.center[0], 2) + math.pow(y - self.center[1], 2)) - offset, 1)
-            distance = length - offset
-            print(f" Radar {degrees[i]}: {distance:.1f}")
+            distance = length - offset          # the real distance of each radar is the length of the radar minus its offset
+            # print(f" Radar {degrees[i]}: {distance}")
             self.radars[i] = [(x, y), distance]
 
 
@@ -347,7 +346,7 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
                 self.img = pygame.transform.flip(RED_CAR[1], True, False)     # and then presses the up arrow key, the car will not move, as this third key press will not be detected.                                
         if keys[pygame.K_RIGHT]:                
                 self.rotate(right=True)
-                self.img = RED_CAR[1]
+                self.img = RED_CAR[1]                                # we change the car img to the one that the wheels are turning
         if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):          # if both keys are pressed, the car should not move
             if keys[pygame.K_UP]:
                 throttling = True
@@ -379,7 +378,7 @@ run = True
 clock = pygame.time.Clock()
 FPS = 20
 initialize_game()
-player_car = PlayerCar(8, 1)
+player_car = PlayerCar(6)
 new_img = None
 start_time = None
 
