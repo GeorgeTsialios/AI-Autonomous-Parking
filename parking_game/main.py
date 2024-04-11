@@ -110,7 +110,6 @@ class AbstractCar:
         self.acceleration = 0.1
         self.last_x, self.last_y = self.x, self.y
         self.rotate_center()
-        self.initialize_radars(PARKING_LOT_BORDER_MASK)
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
@@ -159,7 +158,6 @@ class AbstractCar:
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
             # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
             collision_sound.play()
-            # pygame.display.update()
             self.bounce()
         
         elif new_img[1].x < 0 or new_img[1].x > WIN_WIDTH or new_img[1].y < 0 or new_img[1].y > WIN_HEIGHT:       # if the car goes out of the window, return_to_map it
@@ -298,77 +296,43 @@ class AbstractCar:
     def reset(self):
         self.return_to_map()
         initialize_game()
-        self.initialize_radars(PARKING_LOT_BORDER_MASK)
-
-    def initialize_radars(self, game_map):
-        self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
-        degree = 0
-        for i in range(8):
-            length = 0
-            x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * length)
-            y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * length)
-
-            while length < 200:
-                test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * (length + 1))
-                test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * (length + 1))
-                if game_map.get_at((test_x, test_y)) != 0:
-                    break
-                length = length + 1
-                x = test_x
-                y = test_y
-
-            # Calculate Distance To Border And Append To Radars List
-            # dist = int(math.sqrt(math.pow(x - self.center[0], 2) + math.pow(y - self.center[1], 2)))
-            self.radars[i] = [(x, y), length]
-            degree += 45
+        self.check_radars(PARKING_LOT_BORDER_MASK)
 
     def check_radars(self, game_map):
-        degree = 0
+        self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
+        degrees = [45, 75, 105, 135, 225, 255, 285, 315]
+        # degrees = [0, 45, 90, 135, 180, 225, 270, 315]
         step_size = 20
         for i in range(8):
+            length = 30 if degrees[i] % 45 == 0 else 45
+            offset = 25 if degrees[i] % 45 == 0 else 40
             collide = False
-            length = self.radars[i][1] 
+
+            while True:
+                test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degrees[i]))) * length)
+                test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degrees[i]))) * length)
+                if (test_x <= 0 or test_x >= 750) or (test_y <= 0 or test_y >= 750) or game_map.get_at((test_x, test_y)) != 0:
+                    collide = True
+                    break
+                x = test_x
+                y = test_y
+                if length + step_size > 245:
+                    break
+                length = length + step_size
             
-            x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * length)   # the previous length of the radar
-            y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * length)
-
-            if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((x, y)) == 0:  # if the radar is not colliding with an object at its length point
-                # we need to check some previous points (with step size = 20), to check if the radar is colliding with an object at a closer distance
-                test_length = length
-                while test_length - step_size > 0:
-                    test_length = test_length - step_size
-                    test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * test_length)
-                    test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * test_length)
-                    if (test_x > 0 and test_x < 750) and (test_y > 0 and test_y < 750) and game_map.get_at((test_x, test_y)) != 0:
-                        length = test_length
-                        collide = True
-                        break
-                if not collide:        # if the radar is not colliding with anything, increase its length until it gets to 100 or collides with something     
-                    while length < 200:        
-                        # print(f"Radar {i} color: ", game_map.get_at((x, y)))
-                        # length = length + 1
-                        test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * (length + 1))
-                        test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * (length + 1))
-                        if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((test_x, test_y)) != 0:
-                            break
-                        length = length + 1
-                        x = test_x
-                        y = test_y
-            else:
-                collide = True
-
-            if collide:         # if the radar is colliding with something, decrease its length until it gets to 0 or stops colliding with something
-                while length > 0:          # if the radar is colliding with something, decrease its length until it gets to 0 or stops colliding with something
-                    # print(f"Radar {i} color: ", game_map.get_at((x, y)))
+            if collide:
+                while length > 0:
                     length = length - 1
-                    x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degree))) * length)
-                    y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degree))) * length)
+                    x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degrees[i]))) * length)
+                    y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degrees[i]))) * length)
                     if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((x, y)) == 0:
                         break
 
-            # dist = int(math.sqrt(math.pow(x - self.center[0], 2) + math.pow(y - self.center[1], 2)))      # Calculate Distance To Border And Append To Radars List
-            self.radars[i] = [(x, y), length]
-            degree += 45
+            # Calculate Distance To Border And Append To Radars List
+            # dist = round(math.sqrt(math.pow(x - self.center[0], 2) + math.pow(y - self.center[1], 2)) - offset, 1)
+            distance = length - offset
+            print(f" Radar {degrees[i]}: {distance:.1f}")
+            self.radars[i] = [(x, y), distance]
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
@@ -415,7 +379,7 @@ run = True
 clock = pygame.time.Clock()
 FPS = 20
 initialize_game()
-player_car = PlayerCar(6, 1)
+player_car = PlayerCar(8, 1)
 new_img = None
 start_time = None
 
@@ -429,8 +393,8 @@ while run:
             break
 
     player_car.move_player()
-    player_car.check_collision()
     player_car.check_radars(PARKING_LOT_BORDER_MASK)
+    player_car.check_collision()
     draw_window(player_car)
 
 
