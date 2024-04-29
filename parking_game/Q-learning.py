@@ -135,7 +135,7 @@ class AbstractCar:
         # pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
         # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
-        # pygame.draw.circle(WIN, (0, 255, 0), self.center, 5)       # draw the center of the car with green color
+        # pygame.draw.circle(WIN, (0, 255, 0), self.center, 3)       # draw the center of the car with green color
         for radar in self.radars:
                 position = radar[0]
                 pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
@@ -376,7 +376,12 @@ class QLearningCar(AbstractCar):
         # self.angle = self.angle // 45       # The discretized angle has 8 bins, in range [0, 7]
         velocity = math.ceil(self.vel / 2) if  self.vel > 0 else math.floor(self.vel / 2)        # The discretized velocity has 6 bins, in range [-2, 3]
         # print(f"Self.vel: {self.vel}    velocity: {velocity}")       # The discretized velocity has 6 bins, in range [-3, 2]
-        
+        angle = round(math.cos(math.radians(self.angle)), 1)       # The discretized angle has 21 bins, in range [-1.0, 1.0]
+        # print(f"Self.angle: {self.angle}    angle: {angle}") 
+        distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))       # The discretized distance has 76 bins, in range [0, 75]  
+        distance_discrete = distance // 50 + 16 if distance >= 200 else distance // 10
+        # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
+
     def move_player(self):
         keys = pygame.key.get_pressed()
         throttling = False   
@@ -408,6 +413,7 @@ def draw_window(player_car):
     pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
         
     player_car.draw()
+    # pygame.draw.circle(WIN, (0, 0, 255), free_spot_rect.center, 3)       # draw the center of the parking spot with blue color
     if intersection is not None:
         pygame.draw.rect(WIN, (255, 0, 0), intersection)            # draw a red rectangle around the point of intersection
 
