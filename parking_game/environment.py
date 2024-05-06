@@ -222,18 +222,6 @@ class ParkingGameEnv(gym.Env):
         self.clock.tick(self.car.fps)
 
 
-class AgentAction(Enum):
-    UP = 0
-    DOWN = 1
-    LEFT = 2
-    RIGHT = 3
-    UP_LEFT = 4
-    UP_RIGHT = 5
-    DOWN_LEFT = 6
-    DOWN_RIGHT = 7
-    NOTHING = 8
-
-
 class AbstractCar:
     def __init__(self, max_vel, fps):
         self.img = self.IMG
@@ -570,6 +558,19 @@ class AgentCar(AbstractCar):
 
         if not throttling and self.vel != 0:                # if the player is not stepping on the gas, reduce the speed 
             self.reduce_speed()
+
+
+class AgentAction(Enum):
+    UP = 0
+    DOWN = 1
+    LEFT = 2
+    RIGHT = 3
+    UP_LEFT = 4
+    UP_RIGHT = 5
+    DOWN_LEFT = 6
+    DOWN_RIGHT = 7
+    NOTHING = 8
+
 
 
 # For unit testing
