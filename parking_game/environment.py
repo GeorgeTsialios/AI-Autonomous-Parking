@@ -93,6 +93,7 @@ class ParkingGameEnv(gym.Env):
 
         # Initialize the Parking problem
         self.car = AgentCar(6, fps=self.metadata['render_fps'])
+        # self.car = PlayerCar(6, fps=self.metadata['render_fps'])            # change to this to control the car with arrow keys
 
         # Gym requires defining the action space. The action space is the agent's set of possible actions.
         # Training code can call action_space.sample() to randomly select an action. 
@@ -108,7 +109,6 @@ class ParkingGameEnv(gym.Env):
             dtype = np.int32
         )
 
-                # self.initialize_game()
         self.clock = pygame.time.Clock()
         self.new_img = None
         self.start_time = None
@@ -178,6 +178,7 @@ class ParkingGameEnv(gym.Env):
         # player_car.epsilon = player_car.min_epsilon + (player_car.max_epsilon - player_car.min_epsilon)* np.exp(-player_car.decay_rate * episode)
         self.car.check_radars(PARKING_LOT_BORDER_MASK)
         self.car.move_player(AgentAction(action))           # Perform action
+        # self.car.move_player()                                # change to this to control the car with arrow keys
         car_parked = self.car.check_collision()
 
         # Determine reward and termination
@@ -238,11 +239,11 @@ class AbstractCar:
         self.img = self.IMG
         self.max_vel = max_vel
         self.vel = 0
-        self.angle = random.randint(0, 360)
-        self.x, self.y = self.calculate_START_POS()
+        # self.angle = random.randint(0, 360)
+        # self.x, self.y = self.calculate_START_POS()
         self.acceleration = 0.1
-        self.last_x, self.last_y = self.x, self.y
-        self.rotate_center()
+        # self.last_x, self.last_y = self.x, self.y
+        # self.rotate_center()
         self.fps = fps
 
     def calculate_START_POS(self):       
@@ -427,6 +428,7 @@ class AbstractCar:
         self.angle = random.randint(0, 360)
         self.x, self.y = self.calculate_START_POS()
         self.last_x, self.last_y = self.x, self.y
+        self.rotate_center()
 
     def reset(self, seed = None):
         random.seed(seed)
@@ -469,28 +471,51 @@ class AbstractCar:
             # print(f" Radar {degrees[i]}: {distance}")
             self.radars[i] = [(x, y), distance]
 
+    def discretize_state(self):
+        for radar in self.radars:
+            radar[1] = radar[1] // 20        # The discretized radar distance has 11 bins, in range [0, 10]
+            # if radar[1] < 0:
+            #     radar[1] = 0
+            # print(f"Discretized radar {self.radars.index(radar)}: {radar[1]}") 
+        velocity = math.ceil(self.vel / 2) if  self.vel > 0 else math.floor(self.vel / 2)        # The discretized velocity has 6 bins, in range [-2, 3]
+        # print(f"Self.vel: {self.vel}    velocity: {velocity}")       
+        angle = int(round(math.cos(math.radians(self.angle)), 1)  * 10)     # The discretized angle has 21 bins, in range [-10, 10]
+        # print(f"Self.angle: {self.angle}    angle: {angle}") 
+        distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))         
+        distance_discrete = distance // 50 + 16 if distance >= 200 else distance // 10          # The discretized distance has 31 bins, in range [0, 30]
+        # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], velocity, angle, distance_discrete
+
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR[0]
 
     def move_player(self):
+        self.player_action = ""
         keys = pygame.key.get_pressed()
         throttling = False   
         self.img = RED_CAR[0]           # the car image is set to the default image, so that it does not rotate when the player is not pressing the left or right arrow key     
-        if keys[pygame.K_LEFT]:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
-                self.rotate(left=True)          # Due to this limitation of keyboard, we can only detect two arrow key presses at a time. This means that if the player is pressing the left and the right arrow key
-                self.img = pygame.transform.flip(RED_CAR[1], True, False)     # and then presses the up arrow key, the car will not move, as this third key press will not be detected.                                
-        if keys[pygame.K_RIGHT]:                
-                self.rotate(right=True)
-                self.img = RED_CAR[1]                                # we change the car img to the one that the wheels are turning
-        if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):          # if both keys are pressed, the car should not move
+        if not (keys[pygame.K_LEFT] and keys[pygame.K_RIGHT]): 
+            if keys[pygame.K_LEFT]:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
+                    self.rotate(left=True)          # Due to this limitation of keyboard, we can only detect two arrow key presses at a time. This means that if the player is pressing the left and the right arrow key
+                    self.img = pygame.transform.flip(RED_CAR[1], True, False)     # and then presses the up arrow key, the car will not move, as this third key press will not be detected.                                
+                    self.player_action = "LEFT "
+            elif keys[pygame.K_RIGHT]:                
+                    self.rotate(right=True)
+                    self.img = RED_CAR[1]   
+                    self.player_action = "RIGHT "                             # we change the car img to the one that the wheels are turning
+        if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):              # if both keys are pressed, the car should not move
             if keys[pygame.K_UP]:
                 throttling = True
                 self.move_forward()
-            if keys[pygame.K_DOWN]:
+                self.player_action = "UP " + self.player_action
+            elif keys[pygame.K_DOWN]:
                 throttling = True
                 self.move_backward()
+                self.player_action = "DOWN " + self.player_action
 
+        if self.player_action == "":
+            self.player_action = "NOTHING "
         if not throttling and self.vel !=0:                # if the player is not stepping on the gas, reduce the speed 
             self.reduce_speed()
 
@@ -525,21 +550,6 @@ class AgentCar(AbstractCar):
     def greedy_policy(Qtable, state):                                       # greedy policy for updating the agent's policy (this is going to be the final policy, after training)
         action = np.argmax(Qtable[state])
         return action
-
-    def discretize_state(self):
-        for radar in self.radars:
-            radar[1] = radar[1] // 20        # The discretized radar distance has 11 bins, in range [0, 10]
-            # if radar[1] < 0:
-            #     radar[1] = 0
-            # print(f"Discretized radar {self.radars.index(radar)}: {radar[1]}") 
-        velocity = math.ceil(self.vel / 2) if  self.vel > 0 else math.floor(self.vel / 2)        # The discretized velocity has 6 bins, in range [-2, 3]
-        # print(f"Self.vel: {self.vel}    velocity: {velocity}")       
-        angle = int(round(math.cos(math.radians(self.angle)), 1)  * 10)     # The discretized angle has 21 bins, in range [-10, 10]
-        # print(f"Self.angle: {self.angle}    angle: {angle}") 
-        distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))         
-        distance_discrete = distance // 50 + 16 if distance >= 200 else distance // 10          # The discretized distance has 31 bins, in range [0, 30]
-        # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], velocity, angle, distance_discrete
     
     def move_player(self, agent_action):
         # keys = pygame.key.get_pressed()
@@ -572,13 +582,14 @@ if __name__=="__main__":
     # print("Check environment end")
 
     # Reset environment
-    obs = env.reset()[0]
+    obs = env.reset(seed=8)[0]      # fixed spawns each time
 
     # Take some random actions
     while(True):
         rand_action = env.action_space.sample()
         obs, reward, terminated, _, _ = env.step(rand_action)
-        # print(f"Observations: {obs}   Action: {AgentAction(rand_action)}   Reward: {reward}   Terminated: {terminated}")
+        print(f"Observations: {obs}   Action: {AgentAction(rand_action).name}   Reward: {reward}   Terminated: {terminated}")
+        # print(f"Observations: {obs}   Action: {env.unwrapped.car.player_action}   Reward: {reward}   Terminated: {terminated}")     # for when the car is controlled using the arrow keys
 
         if(terminated):
             obs = env.reset()[0]
