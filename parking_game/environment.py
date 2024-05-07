@@ -8,13 +8,15 @@
 # The radars will be drawn on the screen as lines.
 # The player car will be controlled by an AI agent, which will use Q-learning to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
 # The agent's states will consist of the 8 depth sensors, the velocity of the car, the angle of the car and the distance between the center of the car and the center of the parking spot. However, these features will be discretized into a smaller number of bins. This way we can reduce the state space size. 
-# The agent will have a Q-table, which will be updated after each action. The agent will have a reward system, which will give a reward of 1 if the car is parked in the parking spot, and -1 if the car collides with an object or goes out of the window. The agent will have a discount factor of 0.9 and a learning rate of 0.1. The agent will have an epsilon value of 0.1, which will be used for epsilon-greedy exploration. The agent will have a maximum of 1000 episodes to learn how to park the car.
+# The agent will have a Q-table, which will be updated after each action. The agent will have a reward system, which will give a reward of 100 if the car is parked in the parking spot, and -20 if the car collides with an object or goes out of the window. The agent will have a discount factor of 0.9 and a learning rate of 0.1. The agent will have an epsilon value of 0.1, which will be used for epsilon-greedy exploration. The agent will have a maximum of 400 episodes to learn how to park the car.
 
 import pygame
 import time
 import math
 import sys
 import random
+import pickle
+import matplotlib.pyplot as plt
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -103,10 +105,10 @@ class ParkingGameEnv(gym.Env):
         # The observation space is used to validate the observation returned by reset() and step().
         # Use a 1D vector: [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, velocity, angle, distance]
         self.observation_space = spaces.Box(
-            low = np.array([0, 0, 0, 0, 0, 0, 0, 0, -2, -10, 0]),
-            high = np.array([10, 10, 10, 10, 10, 10, 10, 10, 3, 10, 30]),
-            shape = (11,),
-            dtype = np.int32
+            low = np.array([0, 0, 0, 0, -1, -5, 0]),
+            high = np.array([5, 5, 5, 5, 2, 5, 16]),
+            shape = (7,),
+            dtype = np.int8
         )
 
         self.clock = pygame.time.Clock()
@@ -155,7 +157,7 @@ class ParkingGameEnv(gym.Env):
 
         # Construct the observation state:
         # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, velocity, angle, distance]
-        obs = np.array(self.car.discretize_state())
+        obs = np.array(self.car.discretize_state()).astype(np.int8)
         
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -190,7 +192,7 @@ class ParkingGameEnv(gym.Env):
 
         # Construct the observation state:
         # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, velocity, angle, distance]
-        obs = np.array((self.car.discretize_state()))
+        obs = np.array((self.car.discretize_state())).astype(np.int8)
 
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -425,13 +427,13 @@ class AbstractCar:
         self.check_radars(PARKING_LOT_BORDER_MASK)
 
     def check_radars(self, game_map):
-        self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
-        degrees = [45, 75, 105, 135, 225, 255, 285, 315]
+        self.radars = [[(0, 0), 0] for _ in range(4)]
+        degrees = [75, 105, 255, 285]
         # degrees = [0, 45, 90, 135, 180, 225, 270, 315]
         step_size = 20
-        for i in range(8):
-            length = 30 if degrees[i] % 45 == 0 else 45                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
-            offset = 23 if degrees[i] % 45 == 0 else 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
+        for i in range(4):
+            length = 45                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
+            offset = 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
             collide = False
 
             while True:
@@ -461,18 +463,16 @@ class AbstractCar:
 
     def discretize_state(self):
         for radar in self.radars:
-            radar[1] = radar[1] // 20        # The discretized radar distance has 11 bins, in range [0, 10]
-            # if radar[1] < 0:
-            #     radar[1] = 0
+            radar[1] = radar[1] // 40        # The discretized radar has 6 bins, in range [0, 5]
             # print(f"Discretized radar {self.radars.index(radar)}: {radar[1]}") 
-        velocity = math.ceil(self.vel / 2) if  self.vel > 0 else math.floor(self.vel / 2)        # The discretized velocity has 6 bins, in range [-2, 3]
+        velocity = math.ceil(self.vel / 4) if  self.vel > 0 else math.floor(self.vel / 4)        # The discretized velocity has 4 bins, in range [-1, 2]
         # print(f"Self.vel: {self.vel}    velocity: {velocity}")       
-        angle = int(round(math.cos(math.radians(self.angle)), 1)  * 10)     # The discretized angle has 21 bins, in range [-10, 10]
+        angle = math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2)     # The discretized angle has 11 bins, in range [-5, 5]
         # print(f"Self.angle: {self.angle}    angle: {angle}") 
         distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))         
-        distance_discrete = distance // 50 + 16 if distance >= 200 else distance // 10          # The discretized distance has 31 bins, in range [0, 30]
+        distance_discrete = distance // 100 + 9 if distance >= 100 else distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], velocity, angle, distance_discrete
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], velocity, angle, distance_discrete
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
@@ -573,25 +573,186 @@ class AgentAction(Enum):
 
 
 
-# For unit testing
-if __name__=="__main__":
-    env = gym.make('parking-game-v0', render_mode='human')
+# For unit testing with random actions
+# if __name__=="__main__":
+#     env = gym.make('parking-game-v0', render_mode='human')
 
-    # Use this to check our custom environment
-    # print("Check environment begin")
-    # check_env(env.unwrapped)
-    # print("Check environment end")
+#     # Use this to check our custom environment
+#     # print("Check environment begin")
+#     # check_env(env.unwrapped)
+#     # print("Check environment end")
 
-    # Reset environment
-    obs = env.reset(seed=8)[0]      # fixed spawns each time
+#     # Reset environment
+#     obs = env.reset(seed=8)[0]      # fixed spawns each time
 
-    # Take some random actions
-    while(True):
-        rand_action = env.action_space.sample()
-        obs, reward, terminated, _, _ = env.step(rand_action)
-        print(f"Observations: {obs}   Action: {AgentAction(rand_action).name}   Reward: {reward}   Terminated: {terminated}")
-        # print(f"Observations: {obs}   Action: {env.unwrapped.car.player_action}   Reward: {reward}   Terminated: {terminated}")     # for when the car is controlled using the arrow keys
+#     # Take some random actions
+#     while(True):
+#         rand_action = env.action_space.sample()
+#         obs, reward, terminated, _, _ = env.step(rand_action)
+#         print(f"Observations: {obs}   Action: {AgentAction(rand_action).name}   Reward: {reward}   Terminated: {terminated}")
+#         # print(f"Observations: {obs}   Action: {env.unwrapped.car.player_action}   Reward: {reward}   Terminated: {terminated}")     # for when the car is controlled using the arrow keys
 
-        if(terminated):
-            obs = env.reset()[0]
+#         if(terminated):
+#             obs = env.reset()[0]
 
+# Number of steps per episode taken by the agent to park.
+# Since we operate at 20 fps, the agent chooses 20 actions per second. The car
+# can always be parked in less than 30 seconds, so we will allow max 600 steps.
+max_steps = 600
+
+# Train using Q-Learning
+def train_q(max_episodes, render=False):
+
+    env = gym.make('parking-game-v0', render_mode='human' if render else None)
+
+    # Initialize the Q Table, a 8D array of zeros.
+    q = np.zeros((6, 6, 6, 6, 4, 11, 17, 9), dtype=np.int8)
+
+    # Hyperparameters
+    alpha = 0.9   # learning rate
+    gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
+    epsilon = 1.0   # 1 = 100% random actions
+
+    episode_rewards = []
+    episode_successes = []      # 1 if car parked, 0 if not
+
+    for i in range(max_episodes):
+        if(render):
+            print(f'Train Episode {i+1}')
+
+        # Reset environment at the beginning of episode
+        state = env.reset()[0]
+        # print(f"State: {state}")
+        terminated = False
+        total_reward = 0
+        episode_successes.append(0)
+
+        # Agent controls the car until it parks or max steps reached
+        for step in range(max_steps):
+
+            # Select action based on epsilon-greedy
+            if random.random() < epsilon:
+                # select random action
+                action = env.action_space.sample()
+            else:                
+                # Convert state of [1,2,3,4,5,6,7] into (1,2,3,4,5,6,7), use this to index into the 7th dimension of the 8D array.
+                q_state_idx = tuple(state) 
+
+                # select best action
+                action = np.argmax(q[q_state_idx])
+            
+            # Perform action
+            new_state,reward,terminated,_,_ = env.step(action)
+            total_reward += reward
+
+            # Convert state of [1,2,3,4,5,6,7] and action of [1] into (1,2,3,4,5,6,7,1), use this to index into the 7th dimension of the 8D array.
+            q_state_action_idx = tuple(state) + (action,)
+
+            # Convert new_state of [1,2,3,4,5,6,7] into (1,2,3,4,5,6,7), use this to index into the 7th dimension of the 8D array.
+            q_new_state_idx = tuple(new_state)
+
+            # Update Q-Table
+            new_value = int(q[q_state_action_idx] + alpha * (reward + gamma * np.max(q[q_new_state_idx]) - q[q_state_action_idx]))
+            q[q_state_action_idx] = -128 if new_value < -128 else 127 if new_value > 127 else new_value
+
+            if terminated:
+                episode_successes[-1] = 1
+                break
+
+            # Update current state
+            state = new_state
+
+
+        # Decrease epsilon
+        epsilon = max(epsilon - 1/max_episodes, 0.05)
+
+        episode_rewards.append(total_reward)
+
+        if i % 100 == 0:     # Save Q-Table every 100 episodes
+            # f = open(f"parking_game/parking_q_{episode}.pkl","wb")
+            # pickle.dump(q, f)
+            # f.close()
+            np.save(f"parking_game/parking_q_{i}.npy", q)
+
+    print("\nMean reward per hundred episodes")
+    for i in range(max_episodes//100):
+        print(f"{i*100}-{(i+1)*100},: mean episode reward: {np.mean(episode_rewards[i*100:(i+1)*100])}")
+
+    print("\nMean succes rate per hundred episodes")
+    for i in range(max_episodes//100):
+        print(f"{i*100}-{(i+1)*100},: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100):.2f} %")
+
+    env.close()
+
+
+def test_q(max_episodes, render=True):
+    
+    # load Q Table from file.
+    # f = open('parking_q_700.pkl', 'rb')
+    # q = pickle.load(f)
+    # f.close()
+    q = np.load('parking_game/parking_q_700.npy')
+
+    env = gym.make('parking-game-v0', render_mode='human' if render else None)
+    successful_episodes = 0
+    episode_rewards = []
+
+    for i in range(max_episodes):
+        if(render):
+            print(f'Test Episode {i}')
+
+        # Reset environment at the beginning of episode
+        state = env.reset()[0]
+        terminated = False
+        step_count = 0
+        total_reward = 0
+
+        # Agent controls the car until it parks or max steps reached
+        while(not terminated and step_count < max_steps):
+
+            # Convert state of [1,2,3,4,5,6,7,8,9,10,11] into (1,2,3,4,5,6,7,8,9,10,11), use this to index into the 11th dimension of the 12D array.
+            q_state_idx = tuple(state) 
+
+            # select best action
+            action = np.argmax(q[q_state_idx])
+            
+            # Perform action
+            state,reward,terminated,_,_ = env.step(action)
+            total_reward += reward
+
+            # Record steps
+            step_count += 1
+        
+        if terminated:
+            successful_episodes += 1
+
+        episode_rewards.append(total_reward)
+
+    env.close()
+
+    # Graph success rate
+    print(f'Agent 700 Success Rate: {successful_episodes}/{max_episodes}')
+    
+    # Graph rewards
+    mean_reward = np.mean(episode_rewards)
+    std_reward = np.std(episode_rewards)
+    plt.plot(episode_rewards)
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
+    plt.savefig('parking_game/parking_q_rewards.png')
+
+
+    # sum_steps = np.zeros(episodes)
+    # for t in range(episodes):
+    #     sum_steps[t] = np.mean(steps_per_episode[max(0, t-100):(t+1)]) # Average steps per 100 episodes
+    # plt.plot(sum_steps)
+    # plt.savefig('v0_warehouse_solution.png')
+
+
+
+if __name__ == '__main__':
+
+    # Train/test using Q-Learning
+    train_q(400, render=True)
+    # test_q(100, render=True)
