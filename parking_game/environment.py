@@ -1,7 +1,7 @@
 # This is going to be a parking game where the player has to park the car in the parking lot. The player car will be controlled by the arrow keys.
 # The car's movement should resemble closely real-life physics in terms of acceleration, deceleration, and turning.
 # There will be 10 parking spots, but only one free for the player, while the rest will be occupied by other cars. The free parking spot 
-# will contain a rectangle, which will turn green once the player places the car inside it. The game resets once the car is stationary inside it for 2 seconds.
+# will contain a rectangle, which will turn green once the player places the car inside it. The game resets once the car is stationary inside it for 1 second.
 # The free parking spot will be randomly chosen at the beginning of each game. Also, the player car will spawn at a random position at the beginning of each game.
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
 # in the middle part of the parking lot). The car will have 8 depth sensors (radars), which will detect the distance to the nearest object (or window borders) in 8 directions.
@@ -94,7 +94,7 @@ class ParkingGameEnv(gym.Env):
         self.render_mode = render_mode
 
         # Initialize the Parking problem
-        self.car = AgentCar(6, fps=self.metadata['render_fps'])
+        self.car = AgentCar(4, fps=self.metadata['render_fps'])
         # self.car = PlayerCar(6, fps=self.metadata['render_fps'])            # change to this to control the car with arrow keys
 
         # Gym requires defining the action space. The action space is the agent's set of possible actions.
@@ -103,17 +103,18 @@ class ParkingGameEnv(gym.Env):
 
         # Gym requires defining the observation space. The observation space consists of the agent's set of possible positions.
         # The observation space is used to validate the observation returned by reset() and step().
-        # Use a 1D vector: [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, velocity, angle, distance]
+        # Use a 1D vector: [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, velocity, angle, difference]
         self.observation_space = spaces.Box(
-            low = np.array([0, 0, 0, 0, -1, -5, 0]),
-            high = np.array([5, 5, 5, 5, 2, 5, 16]),
+            low = np.array([0, 0, 0, 0, -1, -3, -1]),
+            high = np.array([4, 4, 4, 4, 1, 3, 1]),
             shape = (7,),
             dtype = np.int8
         )
 
         self.clock = pygame.time.Clock()
-        self.new_img = None
-        self.start_time = None
+        # self.new_img = None
+        # self.start_time = None
+        # self.distance = None
     
     def initialize_game():
         start_up_sound.play()
@@ -180,19 +181,29 @@ class ParkingGameEnv(gym.Env):
         # player_car.epsilon = player_car.min_epsilon + (player_car.max_epsilon - player_car.min_epsilon)* np.exp(-player_car.decay_rate * episode)
         self.car.check_radars(PARKING_LOT_BORDER_MASK)
         self.car.move_player(AgentAction(action))           # Perform action
-        # self.car.move_player()                                # change to this to control the car with arrow keys
-        car_parked = self.car.check_collision()
-
-        # Determine reward and termination
-        reward = 0
-        terminated = False
-        if car_parked:
-            reward = 1
-            terminated = True
+        # self.car.move_player()                            # Change to this to control the car with arrow keys
+        terminated, collides, parked = self.car.check_collision()
 
         # Construct the observation state:
         # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, velocity, angle, distance]
         obs = np.array((self.car.discretize_state())).astype(np.int8)
+    
+        # Determine reward and termination
+        reward = 0
+
+        if collides:
+            reward -= 20
+
+        else:
+            if parked:
+                reward += 2
+            if terminated:
+                reward += 100
+        
+        # if the car gets closer to the center of the parking spot, give it a reward of 1
+        # else if the car gets further from the center of the parking spot, give it a reward of -1
+        # else don't give it any reward
+        reward += self.car.difference
 
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -235,6 +246,8 @@ class AbstractCar:
         # self.last_x, self.last_y = self.x, self.y
         # self.rotate_center()
         self.fps = fps
+        self.distance = 0
+        self.difference = None
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
@@ -277,12 +290,17 @@ class AbstractCar:
     def check_collision(self):
         global new_img
         global intersection
+
         new_img = self.rotate_center()
+        collides = False
+        parked = False
+        terminated = False
 
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
             # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
             collision_sound.play()
+            collides = True
             self.bounce()
         
         elif new_img[1].x < 0 or new_img[1].x > WIN_WIDTH or new_img[1].y < 0 or new_img[1].y > WIN_HEIGHT:       # if the car goes out of the window, return_to_map it
@@ -302,15 +320,17 @@ class AbstractCar:
                 green_sound.play()
             free_spot_color = (0, 255, 0)
             if self.vel == 0:                          # if the car is stationary in the spot
+                parked = True                          
                 if start_time is None:                 # if it just parked, start the timer
                     start_time = time.time()
-                elif  time.time() - start_time >= 2:   # else if the car has been stationary for 2 seconds, stop the game
-                    return True
+                elif  time.time() - start_time >= 1:   # else if the car has been stationary for 1 second, stop the game
+                    terminated = True
+                    return terminated, collides, parked
             else:
                 start_time = None                      # if the car is not stationary, reset the timer
         else:
             free_spot_color = (255, 0, 0)
-        return False
+        return terminated, collides, parked
     
     def collide_map(self, new_rect, new_mask):
         global intersection
@@ -367,8 +387,8 @@ class AbstractCar:
         '''
         print(f"{self.vel:.2f}")
         self.vel = -self.vel                            # reverse the direction of the car, so that it exits from colliding 
-        if self.vel == 0:         # this was used for when the car was stuck colliding while having velocity = 0, the game would crash
-             self.vel = -0.1       # however I think this is not necessary anymore, because the car will always have a velocity different from 0 (you can not press the up arrow key and the down arrow key at the same time)
+        if round(self.vel, 2) == 0.00:         # this was used for when the car was stuck colliding while having velocity = 0, the game would crash
+            self.vel = -0.1       # however I think this is not necessary anymore, because the car will always have a velocity different from 0 (you can not press the up arrow key and the down arrow key at the same time)
         counter = 0
         while True:
             print(f"{self.vel:.2f}")
@@ -394,7 +414,7 @@ class AbstractCar:
         self.move()
 
     def move_backward(self):    # move backward with half the max speed
-        self.vel = max(self.vel - self.acceleration, -self.max_vel * 2/3)   # max because these are negative values, we are still choosing the lower speed
+        self.vel = max(self.vel - self.acceleration, -self.max_vel * 3/4)   # max because these are negative values, we are still choosing the lower speed
         self.move()
 
     def move(self):
@@ -462,17 +482,21 @@ class AbstractCar:
             self.radars[i] = [(x, y), distance]
 
     def discretize_state(self):
+        previous_distance = self.distance 
         for radar in self.radars:
-            radar[1] = radar[1] // 40        # The discretized radar has 6 bins, in range [0, 5]
-            # print(f"Discretized radar {self.radars.index(radar)}: {radar[1]}") 
-        velocity = math.ceil(self.vel / 4) if  self.vel > 0 else math.floor(self.vel / 4)        # The discretized velocity has 4 bins, in range [-1, 2]
-        # print(f"Self.vel: {self.vel}    velocity: {velocity}")       
-        angle = math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2)     # The discretized angle has 11 bins, in range [-5, 5]
-        # print(f"Self.angle: {self.angle}    angle: {angle}") 
-        distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))         
-        distance_discrete = distance // 100 + 9 if distance >= 100 else distance // 10          # The discretized distance has 17 bins, in range [0, 16]
+            radar[1] = radar[1] // 50        # The discretized radar has 5 bins, in range [0, 4]
+        # print(f"Discretized radar 1: {self.radars[0][1]}") 
+        discrete_vel = 1 if  self.vel > 0 else -1 if self.vel < 0 else 0       # The discretized velocity has 3 bins, in range [-1, 1]
+        # print(f"Self.vel: {self.vel:.2f}    discrete_vel: {discrete_vel}")       
+        discrete_angle = -(-math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) //2)  if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) // 2   # The discretized angle has 7 bins, in range [-3, 3]
+        # print(f"Self.angle: {self.angle:.2f}    discrete_angle: {discrete_angle}") 
+        self.distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))     # the distance of the car to the center of the parking spot
+        # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], velocity, angle, distance_discrete
+        self.difference = 1 if previous_distance - self.distance > 0 else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+        # print(f"Difference: {self.difference}")
+        
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], discrete_vel, discrete_angle, self.difference
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
@@ -606,7 +630,7 @@ def train_q(max_episodes, render=False):
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
 
     # Initialize the Q Table, a 8D array of zeros.
-    q = np.zeros((6, 6, 6, 6, 4, 11, 17, 9), dtype=np.int8)
+    q = np.zeros((5, 5, 5, 5, 3, 7, 3, 9), dtype=np.int8)
 
     # Hyperparameters
     alpha = 0.9   # learning rate
@@ -617,8 +641,8 @@ def train_q(max_episodes, render=False):
     episode_successes = []      # 1 if car parked, 0 if not
 
     for i in range(max_episodes):
-        if(render):
-            print(f'Train Episode {i+1}')
+
+        print(f'Train Episode {i+1}')
 
         # Reset environment at the beginning of episode
         state = env.reset()[0]
@@ -676,11 +700,11 @@ def train_q(max_episodes, render=False):
 
     print("\nMean reward per hundred episodes")
     for i in range(max_episodes//100):
-        print(f"{i*100}-{(i+1)*100},: mean episode reward: {np.mean(episode_rewards[i*100:(i+1)*100])}")
+        print(f"{i*100}-{(i+1)*100}: mean episode reward: {np.mean(episode_rewards[i*100:(i+1)*100])}")
 
     print("\nMean succes rate per hundred episodes")
     for i in range(max_episodes//100):
-        print(f"{i*100}-{(i+1)*100},: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100):.2f} %")
+        print(f"{i*100}-{(i+1)*100}: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100):.2f} %")
 
     env.close()
 
@@ -754,5 +778,5 @@ def test_q(max_episodes, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(400, render=True)
+    train_q(1001, render=False)
     # test_q(100, render=True)
