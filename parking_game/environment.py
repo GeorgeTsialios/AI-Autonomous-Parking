@@ -117,7 +117,7 @@ class ParkingGameEnv(gym.Env):
         # self.distance = None
     
     def initialize_game():
-        start_up_sound.play()
+        # start_up_sound.play()
 
         random.shuffle(cars)
         global parking_spots
@@ -173,10 +173,10 @@ class ParkingGameEnv(gym.Env):
     # Gym required function (and parameters) to perform an action
     def step(self, action):
 
-        for event in pygame.event.get():            
-            if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-                pygame.quit()
-                sys.exit()
+        # for event in pygame.event.get():            
+        #     if event.type == pygame.QUIT:       # If the user closes the window, the game stops
+        #         pygame.quit()
+        #         sys.exit()
 
         # player_car.epsilon = player_car.min_epsilon + (player_car.max_epsilon - player_car.min_epsilon)* np.exp(-player_car.decay_rate * episode)
         self.car.check_radars(PARKING_LOT_BORDER_MASK)
@@ -299,7 +299,7 @@ class AbstractCar:
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
             # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
-            collision_sound.play()
+            # collision_sound.play()
             collides = True
             self.bounce()
         
@@ -316,8 +316,8 @@ class AbstractCar:
         global start_time
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
-                green_sound.play()
+            # if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
+                # green_sound.play()
             free_spot_color = (0, 255, 0)
             if self.vel == 0:                          # if the car is stationary in the spot
                 parked = True                          
@@ -534,37 +534,8 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
 
 class AgentCar(AbstractCar):
     IMG = RED_CAR[0]
-    # state_space = 42996      # 11 * 6 * 21 * 31 = 42996 states
-    # actions = ["forward", "backward", "left", "right", "forward_left", "forward_right", "backward_left", "backward_right", "do_nothing"]
-
-    # def __init__(self, max_vel):
-    #     super().__init__(max_vel)
-    #     self.Qtable = np.zeros((self.state_space, len(self.actions)))                 # initialize the Q-table with zeros
-    #     self.selected_action = self.epsilon_greedy_policy(self.Qtable, 0, 0.1)        # select the first action using epsilon-greedy policy
-    #     self.n_training_episodes = 10000    # Training parameters
-    #     self.learning_rate = 0.7
-    #     self.n_eval_episodes = 100          # Evaluation parameter
-    #     self.max_steps = 99                 # Environment parameters
-    #     self.gamma = 0.95               
-    #     self.eval_seed = []
-    #     self.max_epsilon = 1.0              # Exploration parameters
-    #     self.min_epsilon = 0.05           
-    #     self.decay_rate = 0.0005 
-    
-    def epsilon_greedy_policy(self, Qtable, state, epsilon):                # epsilon-greedy policy for selecting actions
-        random_int = random.uniform(0,1)
-        if random_int > epsilon:
-            action = np.argmax(Qtable[state])
-        else:
-            action = random.choice(self.actions)
-        return action
-    
-    def greedy_policy(Qtable, state):                                       # greedy policy for updating the agent's policy (this is going to be the final policy, after training)
-        action = np.argmax(Qtable[state])
-        return action
     
     def move_player(self, agent_action):
-        # keys = pygame.key.get_pressed()
         throttling = False   
         self.img = RED_CAR[0]           # the car image is set to the default image, so that it does not rotate when the player is not pressing the left or right arrow key     
         if agent_action == AgentAction.LEFT or agent_action == AgentAction.DOWN_LEFT or agent_action == AgentAction.UP_LEFT:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
@@ -621,28 +592,41 @@ class AgentAction(Enum):
 
 # Number of steps per episode taken by the agent to park.
 # Since we operate at 20 fps, the agent chooses 20 actions per second. The car
-# can always be parked in less than 30 seconds, so we will allow max 600 steps.
+# can always be parked in less than 30 seconds, so we will allow max 20 x 30 = 600 steps.
 max_steps = 600
 
-# Train using Q-Learning
-def train_q(max_episodes, render=False):
+# Train using Q-Learning (either from scratch or continue training by loading Q Table from file)
+def train_q(total_episodes, render=False, episodes_previously_trained=0):
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
 
-    # Initialize the Q Table, a 8D array of zeros.
-    q = np.zeros((5, 5, 5, 5, 3, 7, 3, 9), dtype=np.int8)
+    if episodes_previously_trained > 0:
+        q = np.load('parking_game/parking_q_10000.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
+        epsilon = 1                                  # CHANGE THIS TO PREVIOUS EPSILON VALUE
+    
+    else:
+        # Initialize the Q Table, a 8D array of zeros.
+        q = np.zeros((5, 5, 5, 5, 3, 7, 3, 9), dtype=np.int8)
 
-    # Hyperparameters
+        # Hyperparameters
+        epsilon = 1.0   # 1 = 100% random actions
+    
+    min_epsilon = 0.05
+    decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
     alpha = 0.9   # learning rate
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
-    epsilon = 1.0   # 1 = 100% random actions
+    count = 0
 
     episode_rewards = []
     episode_successes = []      # 1 if car parked, 0 if not
+    # episode_times = []
 
-    for i in range(max_episodes):
+    start_time = time.time()
 
-        print(f'Train Episode {i+1}')
+    for episode in range(episodes_previously_trained, total_episodes):
+        # episode_start_time = time.time()
+        count += 1
+        # print(f'Train Episode {episode+1}')
 
         # Reset environment at the beginning of episode
         state = env.reset()[0]
@@ -653,6 +637,13 @@ def train_q(max_episodes, render=False):
 
         # Agent controls the car until it parks or max steps reached
         for step in range(max_steps):
+
+            for event in pygame.event.get():            
+                if event.type == pygame.QUIT:       # If the user closes the window, the game stops
+                    np.save(f"parking_game/parking_q_{episode}.npy", q)
+                    print_stats(epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
+                    pygame.quit()
+                    sys.exit()
 
             # Select action based on epsilon-greedy
             if random.random() < epsilon:
@@ -686,30 +677,44 @@ def train_q(max_episodes, render=False):
             # Update current state
             state = new_state
 
-
         # Decrease epsilon
-        epsilon = max(epsilon - 1/max_episodes, 0.05)
+        # epsilon = max(epsilon - 1/total_episodes, 0.05)
+        epsilon = min_epsilon + (1 - min_epsilon) * np.exp(-decay_rate * count)
 
         episode_rewards.append(total_reward)
 
-        if i % 100 == 0:     # Save Q-Table every 100 episodes
+        if episode % 1000 == 0:     # Save Q-Table every 1000 episodes
             # f = open(f"parking_game/parking_q_{episode}.pkl","wb")
             # pickle.dump(q, f)
             # f.close()
-            np.save(f"parking_game/parking_q_{i}.npy", q)
+            np.save(f"parking_game/parking_q_{episode}.npy", q)
 
-    print("\nMean reward per hundred episodes")
-    for i in range(max_episodes//100):
-        print(f"{i*100}-{(i+1)*100}: mean episode reward: {np.mean(episode_rewards[i*100:(i+1)*100])}")
+        # episode_times.append(time.time() - episode_start_time)
 
-    print("\nMean succes rate per hundred episodes")
-    for i in range(max_episodes//100):
-        print(f"{i*100}-{(i+1)*100}: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100):.2f} %")
+    # print the episode mean time in minutes and seconds
+    # print(f"\nEpisode mean time: {np.mean(episode_times)//60:.0f} minutes, {np.mean(episode_times)%60:.2f} seconds")    
+
+    # print the time it took to train the agent in hours, minutes and seconds
+    training_time = time.time() - start_time
+    print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
+
+    print_stats(epsilon, episode_rewards, episode_successes, episodes_previously_trained, total_episodes) 
 
     env.close()
 
+def print_stats(epsilon, episode_rewards, episode_successes, episodes_previously_trained, episodes_currently_trained):
+    print(f"\nEpsilon: {epsilon}")
 
-def test_q(max_episodes, render=True):
+    print("\nMean reward per hundred episodes")
+    for i in range((episodes_currently_trained - episodes_previously_trained) //100):
+        print(f"{episodes_previously_trained + (i*100)}-{episodes_previously_trained + ((i+1)*100)}: mean episode reward: {np.mean(episode_rewards[i*100:(i+1)*100])}")
+
+    print("\nMean success rate per hundred episodes")
+    for i in range((episodes_currently_trained - episodes_previously_trained) //100):
+        print(f"{episodes_previously_trained + (i*100)}-{episodes_previously_trained + ((i+1)*100)}: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100):.2f} %")
+
+
+def test_q(total_episodes, render=True):
     
     # load Q Table from file.
     # f = open('parking_q_700.pkl', 'rb')
@@ -721,7 +726,7 @@ def test_q(max_episodes, render=True):
     successful_episodes = 0
     episode_rewards = []
 
-    for i in range(max_episodes):
+    for i in range(total_episodes):
         if(render):
             print(f'Test Episode {i}')
 
@@ -755,7 +760,7 @@ def test_q(max_episodes, render=True):
     env.close()
 
     # Graph success rate
-    print(f'Agent 700 Success Rate: {successful_episodes}/{max_episodes}')
+    print(f'Agent 700 Success Rate: {successful_episodes}/{total_episodes}')
     
     # Graph rewards
     mean_reward = np.mean(episode_rewards)
@@ -778,5 +783,5 @@ def test_q(max_episodes, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(1001, render=False)
+    train_q(101, render=False, episodes_previously_trained=0)
     # test_q(100, render=True)
