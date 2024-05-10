@@ -192,18 +192,21 @@ class ParkingGameEnv(gym.Env):
         reward = 0
 
         if collides:
-            reward -= 20
+            reward -= 5000              # punish the car for colliding with an object
 
         else:
             if parked:
-                reward += 2
+                reward += 200 * (1 / (1 + abs(self.car.vel)))     # reward the car when parked (higher reward when the car is stationary)
+            elif self.car.vel == 0:
+                reward -= 1000                      # punish the car for standing still when it has not parked   
             if terminated:
-                reward += 100
+                reward += 20000                     # reward the car for parking in the spot for 1 second
         
-        # if the car gets closer to the center of the parking spot, give it a reward of 1
-        # else if the car gets further from the center of the parking spot, give it a reward of -1
+        # if the car gets closer to the center of the parking spot, give it a reward of 10
+        # else if the car gets further from the center of the parking spot, give it a reward of -10
         # else don't give it any reward
-        reward += self.car.difference
+        reward += self.car.difference * 10
+        # print(f"Reward: {reward}")
 
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -493,7 +496,7 @@ class AbstractCar:
         self.distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))     # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
-        self.difference = 1 if previous_distance - self.distance > 0 else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+        self.difference = 1 if previous_distance - self.distance > 0 and abs(self.vel) > 0.5  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
         # print(f"Difference: {self.difference}")
         
         return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], discrete_vel, discrete_angle, self.difference
@@ -601,19 +604,19 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0):
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
 
     if episodes_previously_trained > 0:
-        q = np.load('parking_game/parking_q_10000.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
+        q = np.load('parking_game/Q-tables/parking_q_30000.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
         epsilon = 1                                  # CHANGE THIS TO PREVIOUS EPSILON VALUE
     
     else:
         # Initialize the Q Table, a 8D array of zeros.
-        q = np.zeros((5, 5, 5, 5, 3, 7, 3, 9), dtype=np.int8)
+        q = np.zeros((5, 5, 5, 5, 3, 7, 3, 9), dtype=np.float16)        # 2 Bytes per element
 
         # Hyperparameters
         epsilon = 1.0   # 1 = 100% random actions
     
     # min_epsilon = 0.05
     # decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
-    alpha = 0.9   # learning rate
+    alpha = 1   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
     # count = 0
 
@@ -629,7 +632,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0):
         # print(f'Train Episode {episode+1}')
 
         
-        state = env.reset()[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=32)[0]          # Reset environment at the beginning of episode
         # print(f"State: {state}")
         terminated = False
         total_reward = 0
@@ -640,10 +643,11 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0):
 
             for event in pygame.event.get():            
                 if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-                    np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
-                    print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
+                    if episode > 100:
+                        np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
+                        print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
+                        plot_graphs(episode_rewards, train=True)
                     pygame.quit()
-                    plot_graphs(episode_rewards, train=True)
                     sys.exit()
 
             # Select action based on epsilon-greedy
@@ -668,8 +672,9 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0):
             q_new_state_idx = tuple(new_state)
 
             # Update Q-Table
-            new_value = int(q[q_state_action_idx] + alpha * (reward + gamma * np.max(q[q_new_state_idx]) - q[q_state_action_idx]))
-            q[q_state_action_idx] = -128 if new_value < -128 else 127 if new_value > 127 else new_value
+            # new_value = int(q[q_state_action_idx] + alpha * (reward + gamma * np.max(q[q_new_state_idx]) - q[q_state_action_idx]))
+            # q[q_state_action_idx] = -128 if new_value < -128 else 127 if new_value > 127 else new_value
+            q[q_state_action_idx] = q[q_state_action_idx] + alpha * (reward + gamma * np.max(q[q_new_state_idx]) - q[q_state_action_idx])
 
             if terminated:
                 episode_successes[-1] = 1
@@ -734,7 +739,7 @@ def test_q(test_episodes, episodes_trained, render=True):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
 
-    q = np.load('parking_game/parking_q_' + str(episodes_trained) + '.npy')  # load Q Table from file
+    q = np.load('parking_game/Q-tables/parking_q_' + str(episodes_trained) + '.npy')  # load Q Table from file
 
     episode_rewards = []
     successful_episodes = 0
@@ -742,7 +747,7 @@ def test_q(test_episodes, episodes_trained, render=True):
     for episode in range(test_episodes):
         print(f'Test Episode {episode}')
 
-        state = env.reset()[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=32)[0]          # Reset environment at the beginning of episode
         terminated = False
         total_reward = 0
 
@@ -755,19 +760,22 @@ def test_q(test_episodes, episodes_trained, render=True):
                     sys.exit()
 
             # Convert state of [1,2,3,4,5,6,7,8,9,10,11] into (1,2,3,4,5,6,7,8,9,10,11), use this to index into the 11th dimension of the 12D array.
-            q_state_idx = tuple(state) 
+            q_state_idx = tuple(state)
+            print(f"State: {state}", end=" ") 
 
             # select best action
             action = np.argmax(q[q_state_idx])
             
             # Perform action
             state,reward,terminated,_,_ = env.step(action)
+            print(f"Reward: {reward}")
             total_reward += reward
 
             if terminated:
                 successful_episodes += 1
                 break
 
+        print(f'Test Episode {episode} Reward: {total_reward}')
         episode_rewards.append(total_reward)
 
     env.close()
@@ -782,5 +790,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(100001, render=False, episodes_previously_trained=0)
-    # test_q(10, 100000, render=True,)
+    # train_q(60001, render=False, episodes_previously_trained=30001)
+    test_q(10, 50000, render=True)
