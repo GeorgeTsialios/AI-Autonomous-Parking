@@ -197,14 +197,13 @@ class ParkingGameEnv(gym.Env):
         else:
             if parked:
                 reward += 200 * (1 / (1 + abs(self.car.vel)))     # reward the car when parked (higher reward when the car is stationary)
-            elif self.car.vel == 0:
+            elif self.car.difference == 0:
                 reward -= 1000                      # punish the car for standing still when it has not parked   
             if terminated:
                 reward += 20000                     # reward the car for parking in the spot for 1 second
         
         # if the car gets closer to the center of the parking spot, give it a reward of 10
         # else if the car gets further from the center of the parking spot, give it a reward of -10
-        # else don't give it any reward
         reward += self.car.difference * 10
         # print(f"Reward: {reward}")
 
@@ -493,9 +492,9 @@ class AbstractCar:
         # print(f"Self.vel: {self.vel:.2f}    discrete_vel: {discrete_vel}")       
         discrete_angle = -(-math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) //2)  if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) // 2   # The discretized angle has 7 bins, in range [-3, 3]
         # print(f"Self.angle: {self.angle:.2f}    discrete_angle: {discrete_angle}") 
-        self.distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))     # the distance of the car to the center of the parking spot
+        self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
-        # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
+        # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
         self.difference = 1 if previous_distance - self.distance > 0 and abs(self.vel) > 0.5  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
         # print(f"Difference: {self.difference}")
         
@@ -599,19 +598,19 @@ class AgentAction(Enum):
 max_steps = 600
 
 # Train using Q-Learning (either from scratch or continue training by loading Q Table from file)
-def train_q(total_episodes, render=False, episodes_previously_trained=0):
+def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpoint=-1):
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
 
     if episodes_previously_trained > 0:
         q = np.load('parking_game/Q-tables/parking_q_30000.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
-        epsilon = 1                                  # CHANGE THIS TO PREVIOUS EPSILON VALUE
+        epsilon = 0.5                                              # CHANGE THIS TO PREVIOUS EPSILON VALUE
     
     else:
         # Initialize the Q Table, a 8D array of zeros.
         q = np.zeros((5, 5, 5, 5, 3, 7, 3, 9), dtype=np.float16)        # 2 Bytes per element
 
-        # Hyperparameters
+    # Hyperparameters
         epsilon = 1.0   # 1 = 100% random actions
     
     # min_epsilon = 0.05
@@ -624,13 +623,9 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0):
     episode_successes = []      # 1 if car parked, 0 if not
     # episode_times = []
 
-    start_time = time.time()
+    start_time = time.time()          
 
-    for episode in range(episodes_previously_trained, total_episodes):
-        # episode_start_time = time.time()
-        # count += 1
-        # print(f'Train Episode {episode+1}')
-
+    for episode in range(episodes_previously_trained+1, total_episodes):
         
         state = env.reset(seed=32)[0]          # Reset environment at the beginning of episode
         # print(f"State: {state}")
@@ -664,6 +659,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0):
             # Perform action
             new_state,reward,terminated,_,_ = env.step(action)
             total_reward += reward
+            # print(f"State: {new_state}")
 
             # Convert state of [1,2,3,4,5,6,7] and action of [1] into (1,2,3,4,5,6,7,1), use this to index into the 7th dimension of the 8D array.
             q_state_action_idx = tuple(state) + (action,)
@@ -689,17 +685,18 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0):
 
         episode_rewards.append(total_reward)
 
-        if episode % 1000 == 0:     # Save Q-Table every 1000 episodes
-            # f = open(f"parking_game/parking_q_{episode}.pkl","wb")
-            # pickle.dump(q, f)
-            # f.close()
+        if episode % 10000 == 0:     # Save Q-Table every 10000 episodes
             np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
 
-        # episode_times.append(time.time() - episode_start_time)
-
-
-    # print the episode mean time in minutes and seconds
-    # print(f"\nEpisode mean time: {np.mean(episode_times)//60:.0f} minutes, {np.mean(episode_times)%60:.2f} seconds")    
+        if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
+            print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
+            plot_graphs(episode_rewards, train=True)
+            print(f"\nCurrent episode: {episode}")
+            checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
+            if checkpoint == 0:
+                np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
+                pygame.quit()
+                sys.exit()    
 
     env.close()
 
@@ -711,15 +708,15 @@ def print_stats(start_time, epsilon, episode_rewards, episode_successes, episode
     training_time = time.time() - start_time
     print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
 
-    print(f"\nEpsilon: {epsilon}")
+    print(f"\nEpsilon: {epsilon:.3f}")
 
-    print("\nMean reward per thousand episodes")
-    for i in range((episodes_currently_trained - episodes_previously_trained) //1000):
-        print(f"{episodes_previously_trained + (i*1000)}-{episodes_previously_trained + ((i+1)*1000)}: mean episode reward: {np.mean(episode_rewards[i*1000:(i+1)*1000])}")
+    print("\nMean reward per 10 thousand episodes")
+    for i in range((episodes_currently_trained - episodes_previously_trained) //10000):
+        print(f"{episodes_previously_trained + (i*10000)}-{episodes_previously_trained + ((i+1)*10000)}: mean episode reward: {np.mean(episode_rewards[i*10000:(i+1)*10000])}")
 
-    print("\nMean success rate per thousand episodes")
-    for i in range((episodes_currently_trained - episodes_previously_trained) //1000):
-        print(f"{episodes_previously_trained + (i*1000)}-{episodes_previously_trained + ((i+1)*1000)}: mean episode success: {(np.mean(episode_successes[i*1000:(i+1)*1000]) * 100):.2f} %")
+    print("\nMean success rate per 10 thousand episodes")
+    for i in range((episodes_currently_trained - episodes_previously_trained) //10000):
+        print(f"{episodes_previously_trained + (i*10000)}-{episodes_previously_trained + ((i+1)*10000)}: mean episode success: {(np.mean(episode_successes[i*10000:(i+1)*10000]) * 100):.2f} %")
 
 def plot_graphs(episode_rewards, train=False):
     mean_reward = np.mean(episode_rewards)
@@ -790,5 +787,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    # train_q(60001, render=False, episodes_previously_trained=30001)
-    test_q(10, 50000, render=True)
+    train_q(5000, render=False, episodes_previously_trained=0, checkpoint=100)
+    # test_q(10, 40000, render=True)
