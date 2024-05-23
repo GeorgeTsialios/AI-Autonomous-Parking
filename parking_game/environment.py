@@ -13,12 +13,13 @@
 
 
 
-
+import ast
 import pygame
 import time
 import math
 import sys
 import random
+import bisect
 import matplotlib.pyplot as plt
 import numpy as np
 import gymnasium as gym
@@ -76,7 +77,8 @@ pygame.display.set_caption("Parking Game!")
 CAR_WIDTH, CAR_HEIGHT = 40, 81.24
 cars = [YELLOW_CAR, PINK_CAR, GREEN_CAR, PURPLE_CAR,]     # flip() is used to flip the image vertically
 
-free_spot_color = (255, 0, 0, 255)      
+free_spot_color = (255, 0, 0, 255)  
+start_time = None    
 parking_spots = {}
 intersection = None
 free_spot_rect = None
@@ -200,20 +202,19 @@ class ParkingGameEnv(gym.Env):
 
         if parked:
                 reward += 1                    # reward the car when parked (higher reward when the car is stationary)
-                if abs(self.car.vel) < 0.2:
+                if abs(self.car.vel) < 0.5:
                     reward += 1
                 if terminated:
                     reward += 20                # reward the car for parking in the spot for 1 second
         else:
                 reward += self.car.difference * 0.08        # reward/ punishment for getting closer/ further from the center of the parking spot
-                reward -= 0.04                 # passive punishment for not parking
-                if abs(self.car.vel) < 0.2:    # punish the car for standing still when it has not parked
+                if abs(self.car.vel) < 0.5:    # punish the car for standing still when it has not parked
                     reward -= 0.1
                 for radar in self.car.radars:
                     if radar[1] == 1:
-                        reward -= 0.04          # punish the car for being too close to an object
+                        reward -= 0.1          # punish the car for being too close to an object
                 if collides:
-                    reward -= 0.5              # punish the car for colliding with an object
+                    reward -= 1              # punish the car for colliding with an object
 
         # if collides:
         #     reward -= 2000              # punish the car for colliding with an object
@@ -348,7 +349,7 @@ class AbstractCar:
                 # green_sound.play()
             free_spot_color = (0, 255, 0)
             parked = True                          
-            if abs(self.vel) < 0.2:                    # if the car is stationary in the spot
+            if abs(self.vel) < 0.5:                    # if the car is stationary in the spot
                 if start_time is None:                 # if it just parked, start the timer
                     start_time = time.time()
                 elif  time.time() - start_time >= 1:   # else if the car has been stationary for 1 second, stop the game
@@ -515,7 +516,7 @@ class AbstractCar:
         for radar in self.radars:
             radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
         # print(f"Discretized radar 1: {self.radars[0][1]}") 
-        discrete_vel = 1 if self.vel >= 0.2 else -1 if self.vel <= -0.2 else 0       # The discretized velocity has 3 bins, in range [-1, 1]
+        discrete_vel = 1 if self.vel >= 0.5 else -1 if self.vel <= -0.5 else 0       # The discretized velocity has 3 bins, in range [-1, 1]
         # print(f"Self.vel: {self.vel:.2f}    discrete_vel: {discrete_vel}")       
         discrete_angle = -(-math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) //2)  if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) // 2   # The discretized angle has 7 bins, in range [-3, 3]
         # print(f"Self.angle: {self.angle:.2f}    discrete_angle: {discrete_angle}") 
@@ -610,91 +611,87 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
 
+    possible_states = read_possible_states()    # Read the possible states from the file possible_states_list.txt
+    
     if episodes_previously_trained > 0:
-        q = np.load('parking_game/Q-tables/parking_q_200000.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
-        epsilon = 0.5                                              # CHANGE THIS TO PREVIOUS EPSILON VALUE
+        q = np.load('parking_game/Q-tables/6000_random.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
+        # epsilon = 0.5                                              # CHANGE THIS TO PREVIOUS EPSILON VALUE
     
     else:
-        # Initialize the Q Table, a 10D array of zeros.
-        q = np.zeros((2, 2, 2, 2, 2, 2, 3, 7, 2, 6), dtype=np.float16)        # 2 Bytes per element
-        # create possible_states set to store visited states
-        possible_states = set()
-
+        # Initialize the Q Table, a 2D array of zeros.
+        q = np.zeros((len(possible_states), len(AgentAction)), dtype=np.float16)        # 2 Bytes per element
 
     # Hyperparameters
-        epsilon = 1.0   # 1 = 100% random actions
+    epsilon = 1.0   # 1 = 100% random actions
     
     max_epsilon = 1.0
     min_epsilon = 0.0001
-    decay_rate = 0.001  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
-    alpha = 0.1   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
+    decay_rate = 0.01  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
+    alpha = 0.9   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
+    min_alpha = 0.1
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
-    # count = 0
 
     episode_rewards = []
     episode_successes = []      # 1 if car parked, 0 if not
-    # episode_times = []
+    states_to_add = []
 
-    start_time = time.time()          
+    training_start = time.time()          
 
-    for episode in range(episodes_previously_trained+1, total_episodes+1):
+    for episode in range(1, total_episodes+1):
         
         state = env.reset()[0]          # Reset environment at the beginning of episode
         terminated = False
         total_reward = 0
         episode_successes.append(0)
-
         
-        for step in range(max_steps):       # Agent controls the car until it parks or max steps reached
+        for _ in range(max_steps):       # Agent controls the car until it parks or max steps reached
 
             for event in pygame.event.get():            
                 if event.type == pygame.QUIT:       # If the user closes the window, the game stops
                     if episode > 100:
                         np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
-                        print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
+                        possible_states, states_to_add = update_possible_states(possible_states, states_to_add)
+                        print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
                         plot_graphs(episode_rewards, train=True)
                     pygame.quit()
                     sys.exit()
 
-            # Select action based on epsilon-greedy
-            if random.random() < epsilon:
-                # select random action
-                action = env.action_space.sample()
-            else:                
-                # Convert state of [1,2,3,4,5,6,7] into (1,2,3,4,5,6,7), use this to index into the 7th dimension of the 8D array.
-                q_state_idx = tuple(state) 
+            state_tuple = tuple(state)
+            state_in_table = binary_search(possible_states, state_tuple) 
 
-                # select best action
-                action = np.argmax(q[q_state_idx])
+            if not state_in_table:
+                states_to_add.append(state_tuple)
+                action = env.action_space.sample()
+            else:
+                state_index = possible_states.index(state_tuple)
+                # Select action based on epsilon-greedy
+                if random.random() < epsilon:
+                    # select random action
+                    action = env.action_space.sample()
+                else:                
+                    # select best action
+                    action = np.argmax(q[state_index])      
             
             # Perform action
             new_state,reward,terminated,_,_ = env.step(action)
             total_reward += reward
 
-            # Convert state of [1,2,3,4,5,6,7] and action of [1] into (1,2,3,4,5,6,7,1), use this to index into the 7th dimension of the 8D array.
-            q_state_action_idx = tuple(state) + (action,)
-
-            # Convert new_state of [1,2,3,4,5,6,7] into (1,2,3,4,5,6,7), use this to index into the 7th dimension of the 8D array.
-            q_new_state_idx = tuple(new_state)
-
-            # Update Q-Table
-            # new_value = int(q[q_state_action_idx] + alpha * (reward + gamma * np.max(q[q_new_state_idx]) - q[q_state_action_idx]))
-            # q[q_state_action_idx] = -128 if new_value < -128 else 127 if new_value > 127 else new_value
-            q[q_state_action_idx] = q[q_state_action_idx] + alpha * (reward + gamma * np.max(q[q_new_state_idx]) - q[q_state_action_idx])
+            new_state_in_table = binary_search(possible_states, tuple(new_state))
+            if new_state_in_table and state_in_table:                       # if both states are in the table, update the Q-Table
+                new_state_index = possible_states.index(tuple(new_state))
+                q[state_index][action] = q[state_index][action] + alpha * (reward + gamma * np.max(q[new_state_index]) - q[state_index][action])
 
             if terminated:
                 episode_successes[-1] = 1
                 break
-
-            # store state in possible_states set
-            possible_states.add(q_state_idx)
 
             # Update current state
             state = new_state
 
         # Decrease epsilon
         # epsilon = max(epsilon - 1/total_episodes, min_epsilon)
-        # epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        alpha = min_alpha + (1 - min_alpha) * np.exp(-0.005 * episode)
 
         episode_rewards.append(total_reward)
 
@@ -702,7 +699,8 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
             np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
 
         if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
-            print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
+            print(f"\n States to add: {len(states_to_add)}")
+            print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
             plot_graphs(episode_rewards, train=True)
             print(f"\nCurrent episode: {episode}")
             checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
@@ -713,34 +711,61 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     env.close()
 
-    print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, total_episodes) 
+    np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)    # Save Q-Table after training
+    possible_states, states_to_add = update_possible_states(possible_states, states_to_add)    # Update the possible states list with the new states visited during training
+    print_stats(training_start, epsilon, episode_rewards, episode_successes, total_episodes) 
     plot_graphs(episode_rewards, train=True)    # Graph rewards
 
-    # print the possible states with all actions, ordered by state
-    possible_states_actions = sorted(possible_states_actions)
-    # print(f"\n Possible states with all actions: {(possible_states_actions)}\n")
 
-    # convert the possible states with all actions to a numpy 10D array
-    possible_states_actions = np.zeros(possible_states_actions, dtype=np.float16)
-    print(f"\n Possible states with all actions: {possible_states_actions}\n")
-    
+def read_possible_states():
+    # create possible_states list to store visited states as tuples
+    possible_states = []
+    # read the possible states from the file possible_states_list.txt
+    with open("parking_game/MY_possible_states_list.txt", "r") as file:
+        for line in file:
+            state = ast.literal_eval(line.strip())
+            possible_states.append(state)
+    # print(f"Possible states: {len(possible_states)}") 
+    return possible_states   
 
+def update_possible_states(possible_states, states_to_add):
 
+    states_to_add = list(set(states_to_add))    # remove duplicates
+    for state in states_to_add:
+        possible_states.append(state)
+    states_to_add.clear()
 
+    # print the possible states, ordered by state
+    possible_states = list(set(possible_states))    # remove duplicates
+    print(f"\nLength of possible states: {len(possible_states)}")
+    possible_states.sort()
+    # delete the file possible_states.txt and write the possible states in it as a tuple
+    with open("parking_game/MY_possible_states_list.txt", "w") as file:
+        for state in possible_states:
+            file.write(str(state) + "\n")
 
-def print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episodes_currently_trained):
-    training_time = time.time() - start_time
+    return possible_states, states_to_add
+
+def binary_search(my_list, item):
+    i = bisect.bisect_left(my_list, item)
+    if i != len(my_list) and my_list[i] == item:
+        return True
+    else:
+        return False
+
+def print_stats(training_start, epsilon, episode_rewards, episode_successes, episodes_currently_trained, episodes_previously_trained=0):
+    training_time = time.time() - training_start
     print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
 
     print(f"\nEpsilon: {epsilon:.4f}")
 
     print("\nMean reward per hundred episodes")
     for i in range((episodes_currently_trained - episodes_previously_trained) //100):
-        print(f"{episodes_previously_trained + (i*100):5}-{episodes_previously_trained + ((i+1)*100):5}: mean episode reward: {round(np.mean(episode_rewards[i*100:(i+1)*100]),3)}")
+        print(f"{episodes_previously_trained + (i*100):5} -{episodes_previously_trained + ((i+1)*100):5}: mean episode reward: {round(np.mean(episode_rewards[i*100:(i+1)*100]),3)}")
 
     print("\nMean success rate per hundred episodes")
     for i in range((episodes_currently_trained - episodes_previously_trained) //100):
-        print(f"{episodes_previously_trained + (i*100):5}-{episodes_previously_trained + ((i+1)*100):5}: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100)} %")
+        print(f"{episodes_previously_trained + (i*100):5} -{episodes_previously_trained + ((i+1)*100):5}: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100)} %")
 
 def plot_graphs(episode_rewards, train=False):
     mean_reward = np.mean(episode_rewards)
@@ -766,6 +791,8 @@ def test_q(test_episodes, episodes_trained, render=True):
 
     q = np.load('parking_game/Q-tables/parking_q_' + str(episodes_trained) + '.npy')  # load Q Table from file
 
+    possible_states = read_possible_states()    # Read the possible states from the file possible_states_list.txt
+
     episode_rewards = []
     successful_episodes = 0
 
@@ -784,11 +811,11 @@ def test_q(test_episodes, episodes_trained, render=True):
                     pygame.quit()
                     sys.exit()
 
-            # Convert state of [1,2,3,4,5,6,7,8,9,10,11] into (1,2,3,4,5,6,7,8,9,10,11), use this to index into the 11th dimension of the 12D array.
-            q_state_idx = tuple(state)
+            state_tuple = tuple(state)
+            state_index = possible_states.index(state_tuple)
+            # Select best action based on Q Table
+            action = np.argmax(q[state_index])
 
-            # select best action
-            action = np.argmax(q[q_state_idx])
             print(f"State: {state}       Action: {AgentAction(action).name:<10}", end=' ')
 
             # Perform action
@@ -815,5 +842,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(100, render=False, episodes_previously_trained=0, checkpoint=1000)
-    # test_q(10, 10000, render=True)
+    # train_q(1000, render=False, episodes_previously_trained=0, checkpoint=6000)
+    test_q(10, 1000, render=True)
