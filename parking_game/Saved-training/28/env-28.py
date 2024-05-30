@@ -197,7 +197,7 @@ class ParkingGameEnv(gym.Env):
         
         else:
             if state[6] == 0:    # punish the car for standing still when it has not parked
-                reward -= 2
+                reward -= 0.4
             for radar in self.car.radars:
                 if radar[1] == 1:
                     reward -= 0.5          # punish the car for being too close to an object
@@ -573,7 +573,7 @@ class AgentAction(Enum):
 
 # Number of steps per episode taken by the agent to park.
 # Since we operate at 20 fps, the agent chooses 20 actions per second. The car
-# can always be parked in less than 30 seconds, so we will allow max 20 x 30 = 600 steps
+# can always be parked in less than 30 seconds, so we will allow max 20 x 30 = 600 steps.
 max_steps = 600
 
 # Train using Q-Learning (either from scratch or continue training by loading Q Table from file)
@@ -586,8 +586,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     
     else:
         # Initialize the Q Table, a 2D array of zeros.
-        # q = np.zeros((2, 2, 2, 2, 3, 3, 3, 7, len(AgentAction)), dtype=np.float16)        # 2 Bytes per element
-        q = np.load('parking_game/Q-tables/parking_q_28_8000.npy')
+        q = np.zeros((2, 2, 2, 2, 3, 3, 3, 7, len(AgentAction)), dtype=np.float16)        # 2 Bytes per element
 
     # Hyperparameters
     epsilon = 1.0   # 1 = 100% random actions
@@ -595,7 +594,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     max_epsilon = 1.0
     min_epsilon = 0.0001
     decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
-    alpha = 0.4   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
+    alpha = 0.9   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
     min_alpha = 0.1
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
 
@@ -606,7 +605,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     for episode in range(1, total_episodes+1):
         print(f"\nEpisode: {episode}")
-        state = env.reset(seed=22)[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=30)[0]          # Reset environment at the beginning of episode
         terminated = False
         total_reward = 0
         episode_successes.append(0)
@@ -652,7 +651,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
         # Decrease epsilon and alpha
         # epsilon = max(epsilon - 1/total_episodes, min_epsilon)
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-        alpha = min_alpha + (0.4 - min_alpha) * np.exp(-decay_rate * episode)
+        alpha = min_alpha + (0.9 - min_alpha) * np.exp(-decay_rate * episode)
 
         episode_rewards.append(total_reward)
 
@@ -661,7 +660,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
         if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
             print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
-            plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)
+            plot_graphs(episode_rewards, train=True)
             print(f"\nCurrent episode: {episode}")
             checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
             if checkpoint == 0:
@@ -673,7 +672,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)    # Save Q-Table after training
     print_stats(training_start, epsilon, episode_rewards, episode_successes, total_episodes) 
-    plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
+    plot_graphs(episode_rewards, episode_successes=episode_successes, train=True, step=100)    # Graph rewards
 
 
 def print_stats(training_start, epsilon, episode_rewards, episode_successes, episodes_currently_trained, step=100, episodes_previously_trained=0):
@@ -691,32 +690,32 @@ def print_stats(training_start, epsilon, episode_rewards, episode_successes, epi
         print(f"{episodes_previously_trained + (i*step):5} -{episodes_previously_trained + ((i+1)*step):5}: mean episode success: {(np.mean(episode_successes[i*step:(i+1)*step]) * 100):.2f} %")
 
 def plot_graphs(episode_rewards, episode_successes=None, train=False, step=100):
+    '''Plot the mean reward per step episodes and the standard deviation of the rewards.
+       Under the graph, in the same window, plot the mean success rate per step episodes.
     '''
-        Create 1 figure with 2 vertically stacked subplots.
-        The 1st subplot is the mean reward per step episodes.
-        The 2nd subplot is the mean success rate per step episodes.
-        Then save the figure as a .png file.
-    '''
-    fig, axs = plt.subplots(2, sharex=True, figsize=(8, 10))
-
     mean_reward = np.mean(episode_rewards)
-    std_reward = np.std(episode_rewards)
+    std_reward = np.std(episode_rewards)        # standard deviation
+
     mean_episode_rewards = [np.mean(episode_rewards[i:i+step]) for i in range(0, len(episode_rewards), step)]
-    axs[0].plot([i*step for i in range(len(mean_episode_rewards))], mean_episode_rewards)
-    axs[0].set_ylabel('Reward')
-    axs[0].set_title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
+    plt.plot([i*step for i in range(len(mean_episode_rewards))], mean_episode_rewards)
+    
+    # plt.plot(episode_rewards)
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
 
     if episode_successes is not None:
+        plt.figure()
         mean_successes = [np.mean(episode_successes[i:i+step]) for i in range(0, len(episode_successes), step)]
-        axs[1].plot([i*step for i in range(len(mean_successes))], mean_successes)
-        axs[1].set_xlabel('Episode')
-        axs[1].set_ylabel('Success Rate')
-        axs[1].set_title(f'Q-Learning Success Rate')
+        plt.plot([i*step for i in range(len(mean_successes))], mean_successes)
+        plt.xlabel('Episode')
+        plt.ylabel('Success Rate')
+        plt.title(f'Q-Learning Success Rate')
 
     if train:
-        plt.savefig('parking_game/parking_q_stats-train.png')
+        plt.savefig('parking_game/parking_q_rewards-train.png')
     else:
-        plt.savefig('parking_game/parking_q_stats-test.png')
+        plt.savefig('parking_game/parking_q_rewards-test.png')
     plt.show()
 
 
@@ -730,7 +729,7 @@ def test_q(test_episodes, episodes_trained, render=True):
     successful_episodes = 0
 
     for episode in range(1, test_episodes+1):
-        state = env.reset(seed=22)[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=30)[0]          # Reset environment at the beginning of episode
         terminated = False
         total_reward = 0
 
@@ -779,5 +778,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(8000, render=False, episodes_previously_trained=0, checkpoint=15000)
-    # test_q(10, 14000, render=False)
+    # train_q(8000, render=False, episodes_previously_trained=0, checkpoint=15000)
+    test_q(100, 7500, render=False)

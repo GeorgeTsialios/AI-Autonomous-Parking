@@ -573,7 +573,7 @@ class AgentAction(Enum):
 
 # Number of steps per episode taken by the agent to park.
 # Since we operate at 20 fps, the agent chooses 20 actions per second. The car
-# can always be parked in less than 30 seconds, so we will allow max 20 x 30 = 600 steps
+# can always be parked in less than 30 seconds, so we will allow max 20 x 30 = 600 steps.
 max_steps = 600
 
 # Train using Q-Learning (either from scratch or continue training by loading Q Table from file)
@@ -586,8 +586,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     
     else:
         # Initialize the Q Table, a 2D array of zeros.
-        # q = np.zeros((2, 2, 2, 2, 3, 3, 3, 7, len(AgentAction)), dtype=np.float16)        # 2 Bytes per element
-        q = np.load('parking_game/Q-tables/parking_q_28_8000.npy')
+        q = np.zeros((2, 2, 2, 2, 3, 3, 3, 7, len(AgentAction)), dtype=np.float16)        # 2 Bytes per element
 
     # Hyperparameters
     epsilon = 1.0   # 1 = 100% random actions
@@ -595,7 +594,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     max_epsilon = 1.0
     min_epsilon = 0.0001
     decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
-    alpha = 0.4   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
+    alpha = 0.9   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
     min_alpha = 0.1
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
 
@@ -652,7 +651,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
         # Decrease epsilon and alpha
         # epsilon = max(epsilon - 1/total_episodes, min_epsilon)
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-        alpha = min_alpha + (0.4 - min_alpha) * np.exp(-decay_rate * episode)
+        alpha = min_alpha + (0.9 - min_alpha) * np.exp(-decay_rate * episode)
 
         episode_rewards.append(total_reward)
 
@@ -661,7 +660,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
         if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
             print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
-            plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)
+            plot_graphs(episode_rewards, train=True)
             print(f"\nCurrent episode: {episode}")
             checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
             if checkpoint == 0:
@@ -673,7 +672,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)    # Save Q-Table after training
     print_stats(training_start, epsilon, episode_rewards, episode_successes, total_episodes) 
-    plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
+    plot_graphs(episode_rewards, episode_successes=episode_successes, train=True, step=100)    # Graph rewards
 
 
 def print_stats(training_start, epsilon, episode_rewards, episode_successes, episodes_currently_trained, step=100, episodes_previously_trained=0):
@@ -779,5 +778,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(8000, render=False, episodes_previously_trained=0, checkpoint=15000)
-    # test_q(10, 14000, render=False)
+    # train_q(8000, render=False, episodes_previously_trained=0, checkpoint=15000)
+    test_q(100, 8000, render=True)
