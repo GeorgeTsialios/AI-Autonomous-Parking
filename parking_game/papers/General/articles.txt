@@ -1,0 +1,22 @@
+ML:
+
+https://www.coursera.org/articles/types-of-machine-learning
+
+https://towardsdatascience.com/types-of-machine-learning-algorithms-you-should-know-953a08248861
+
+https://www.sas.com/en_gb/insights/articles/analytics/machine-learning-algorithms.html
+
+
+RL:
+
+https://smartlabai.medium.com/reinforcement-learning-algorithms-an-intuitive-overview-904e2dff5bbc
+
+
+Deep RL:
+
+https://www.v7labs.com/blog/deep-reinforcement-learning-guide
+
+
+Pytorch vs TensorFlow
+
+https://builtin.com/data-science/pytorch-vs-tensorflow

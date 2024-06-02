@@ -193,16 +193,16 @@ class ParkingGameEnv(gym.Env):
     
         # Determine reward and termination
         reward = 0
-
+        reward -= 3
         if collides:
             reward -= 2000              # punish the car for colliding with an object
 
         else:
             if parked:
                 reward += 100                    # reward the car when parked (higher reward when the car is stationary)
-                if self.car.vel == 0:
+                if abs(self.car.vel) <0.5:
                     reward += 300                
-            elif abs(self.car.vel) < 0.2:
+            elif abs(self.car.vel) <0.5:
                 reward -= 10                      # punish the car for standing still when it has not parked   
             if terminated:
                 reward += 10000                     # reward the car for parking in the spot for 1 second
@@ -253,6 +253,7 @@ class AbstractCar:
         # self.last_x, self.last_y = self.x, self.y
         # self.rotate_center()
         self.fps = fps
+        self.count = 1
         self.distance = 0
         self.difference = None
 
@@ -320,23 +321,25 @@ class AbstractCar:
              intersection = None
 
         global free_spot_color
-        global start_time
 
         if self.collide_free_spot(new_img[1], new_img[2]):
             # if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
                 # green_sound.play()
             free_spot_color = (0, 255, 0)
             parked = True                          
-            if self.vel == 0:                          # if the car is stationary in the spot
-                if start_time is None:                 # if it just parked, start the timer
-                    start_time = time.time()
-                elif  time.time() - start_time >= 1:   # else if the car has been stationary for 1 second, stop the game
+            if abs(self.vel) < 0.5:                    # if the car is stationary in the spot
+                # print(f"Parked & stationary for {self.count} {"frame" if self.count == 1 else "frames"}", end = " ")
+                if self.count < 20:                 # if the car has been stationary for less than 20 frames, increment the counter
+                    self.count += 1
+                else:   # else if the car has been stationary for 20 frames, stop the game
                     terminated = True
+                    self.count = 1
                     return terminated, collides, parked
             else:
-                start_time = None                      # if the car is not stationary, reset the timer
+                self.count = 1                      # if the car is not stationary, reset the counter
         else:
             free_spot_color = (255, 0, 0)
+            self.count = 1
 
         return terminated, collides, parked
     
@@ -348,34 +351,34 @@ class AbstractCar:
             # pygame.draw.rect(WIN, (0, 0, 0), new_rect)
             if GARDEN_BORDER_MASK.overlap(new_mask, offset) is not None:   # now we check for pixel perfect collision, because when the car is turning, the new_rect rectangle is bigger than the car image. This leads to false positive collision detetctions when the car is turning around the edges of the garden.
                 intersection = new_rect.clip(GARDEN)                       # returns a new rectangle that represents the intersection of the two rectangles.
-                print(f"collision with garden")
+                # print(f"collision with garden")
                 return True
         elif new_rect.colliderect(TOP_RECT):
                 intersection = None
-                print(f"collision with top rect")
-                print(f"x: {new_rect.x}, y: {new_rect.y}")
+                # print(f"collision with top rect")
+                # print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         elif new_rect.colliderect(BOTTOM_RECT):
                 intersection = None
-                print(f"collision with bottom rect")
-                print(f"x: {new_rect.x}, y: {new_rect.y}")
+                # print(f"collision with bottom rect")
+                # print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         elif new_rect.colliderect(LEFT_RECT):
                 intersection = None
-                print(f"collision with left rect")
-                print(f"x: {new_rect.x}, y: {new_rect.y}")
+                # print(f"collision with left rect")
+                # print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         elif new_rect.colliderect(RIGHT_RECT):
                 intersection = None
-                print(f"collision with right rect")
-                print(f"x: {new_rect.x}, y: {new_rect.y}")
+                # print(f"collision with right rect")
+                # print(f"x: {new_rect.x}, y: {new_rect.y}")
                 return True
         for index, spot in parking_spots.items():
             if new_rect.colliderect(spot[0]):
                 if PARKING_LOT_BORDER_MASK.overlap(new_mask, offset) is not None: 
                     intersection = new_rect.clip(spot[0])
-                    print(f"collision with car {index}")
-                    print(f"x: {new_rect.x}, y: {new_rect.y}")
+                    # print(f"collision with car {index}")
+                    # print(f"x: {new_rect.x}, y: {new_rect.y}")
                     return True
         return False
 
@@ -393,13 +396,13 @@ class AbstractCar:
         The car will keep moving in this direction until it is no longer colliding with the object.
         After that, the car will stop moving.
         '''
-        print(f"{self.vel:.2f}")
+        # print(f"{self.vel:.2f}")
         self.vel = -self.vel                            # reverse the direction of the car, so that it exits from colliding 
         if round(self.vel, 2) == 0.00:         # this was used for when the car was stuck colliding while having velocity = 0, the game would crash
             self.vel = -0.1       # however I think this is not necessary anymore, because the car will always have a velocity different from 0 (you can not press the up arrow key and the down arrow key at the same time)
         counter = 0
         while True:
-            print(f"{self.vel:.2f}")
+            # print(f"{self.vel:.2f}")
             counter += 1
             if counter == 50:                           # if the car is stuck in an infinite loop, break it. This happens when the car was colliding with the object while moving away from it. For example, the car would be moving in reverse and turning at the same time. Its rotation eould make it so that its front car would be colliding with the object, while its back would be moving away from it. So the switching in its velocity in line 80 woul be a mistake and would force the car to move into the object. That's why, if the while loop runs for too long, we assume that this is the issue and we switch the velocity again. 
                 self.vel = -self.vel
@@ -494,7 +497,7 @@ class AbstractCar:
         for radar in self.radars:
             radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
         # print(f"Discretized radar 1: {self.radars[0][1]}") 
-        discrete_vel = 1 if self.vel >= 0.2 else -1 if self.vel <= -0.2 else 0       # The discretized velocity has 3 bins, in range [-1, 1]
+        discrete_vel = 1 if self.vel >= 0.5 else -1 if self.vel <= -0.5 else 0       # The discretized velocity has 3 bins, in range [-1, 1]
         # print(f"Self.vel: {self.vel:.2f}    discrete_vel: {discrete_vel}")       
         discrete_angle = -(-math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) //2)  if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) // 2   # The discretized angle has 7 bins, in range [-3, 3]
         # print(f"Self.angle: {self.angle:.2f}    discrete_angle: {discrete_angle}") 
@@ -575,7 +578,7 @@ class AgentAction(Enum):
     UP_RIGHT = 3
     DOWN_LEFT = 4
     DOWN_RIGHT = 5
-    NOTHING = 6
+    # NOTHING = 6
 
 
 
@@ -595,17 +598,17 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     
     else:
         # Initialize the Q Table, a 8D array of zeros.
-        q = np.zeros((2, 2, 2, 2, 2, 2, 3, 7, 2, 7), dtype=np.float16)        # 2 Bytes per element
+        q = np.zeros((2, 2, 2, 2, 2, 2, 3, 7, 2, len(AgentAction)), dtype=np.float16)        # 2 Bytes per element
 
     # Hyperparameters
         epsilon = 1.0   # 1 = 100% random actions
     
     max_epsilon = 1.0
     min_epsilon = 0.0001
-    decay_rate = 0.0001  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
-    alpha = 0.9   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
-    gamma = 0.99   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
-    # count = 0
+    decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
+    alpha = 1   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
+    min_alpha = 0.1
+    gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
 
     episode_rewards = []
     episode_successes = []      # 1 if car parked, 0 if not
@@ -613,8 +616,9 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     start_time = time.time()          
 
-    for episode in range(episodes_previously_trained+1, total_episodes+1):
-        
+    for episode in range(1, total_episodes+1):
+        print(f"\nEpisode: {episode}")
+
         state = env.reset()[0]          # Reset environment at the beginning of episode
         # print(f"State: {state}")
         terminated = False
@@ -622,14 +626,14 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
         episode_successes.append(0)
 
         
-        for step in range(max_steps):       # Agent controls the car until it parks or max steps reached
+        for _ in range(max_steps):       # Agent controls the car until it parks or max steps reached
 
             for event in pygame.event.get():            
                 if event.type == pygame.QUIT:       # If the user closes the window, the game stops
                     if episode > 100:
                         np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
                         print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
-                        plot_graphs(episode_rewards, train=True)
+                        plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
                     pygame.quit()
                     sys.exit()
 
@@ -670,6 +674,8 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
         # Decrease epsilon
         # epsilon = max(epsilon - 1/total_episodes, 0.05)
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+        alpha = min_alpha + (1 - min_alpha) * np.exp(-decay_rate * episode)
+
 
         episode_rewards.append(total_reward)
 
@@ -678,7 +684,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
         if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
             print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episode)
-            plot_graphs(episode_rewards, train=True)
+            plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
             print(f"\nCurrent episode: {episode}")
             checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
             if checkpoint == 0:
@@ -689,7 +695,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     env.close()
 
     print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, total_episodes) 
-    plot_graphs(episode_rewards, train=True)    # Graph rewards
+    plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
 
 
 def print_stats(start_time, epsilon, episode_rewards, episode_successes, episodes_previously_trained, episodes_currently_trained):
@@ -706,17 +712,33 @@ def print_stats(start_time, epsilon, episode_rewards, episode_successes, episode
     for i in range((episodes_currently_trained - episodes_previously_trained) //100):
         print(f"{episodes_previously_trained + (i*100)}-{episodes_previously_trained + ((i+1)*100)}: mean episode success: {(np.mean(episode_successes[i*100:(i+1)*100]) * 100):.2f} %")
 
-def plot_graphs(episode_rewards, train=False):
+def plot_graphs(episode_rewards, episode_successes=None, train=False, step=100):
+    '''
+        Create 1 figure with 2 vertically stacked subplots.
+        The 1st subplot is the mean reward per step episodes.
+        The 2nd subplot is the mean success rate per step episodes.
+        Then save the figure as a .png file.
+    '''
+    fig, axs = plt.subplots(2, sharex=True, figsize=(8, 10))
+
     mean_reward = np.mean(episode_rewards)
-    std_reward = np.std(episode_rewards)        # standard deviation
-    plt.plot(episode_rewards)
-    plt.xlabel('Episode')
-    plt.ylabel('Reward')
-    plt.title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
+    std_reward = np.std(episode_rewards)
+    mean_episode_rewards = [np.mean(episode_rewards[i:i+step]) for i in range(0, len(episode_rewards), step)]
+    axs[0].plot([i*step for i in range(len(mean_episode_rewards))], mean_episode_rewards)
+    axs[0].set_ylabel('Reward')
+    axs[0].set_title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
+
+    if episode_successes is not None:
+        mean_successes = [np.mean(episode_successes[i:i+step]) for i in range(0, len(episode_successes), step)]
+        axs[1].plot([i*step for i in range(len(mean_successes))], mean_successes)
+        axs[1].set_xlabel('Episode')
+        axs[1].set_ylabel('Success Rate')
+        axs[1].set_title(f'Q-Learning Success Rate')
+
     if train:
-        plt.savefig('parking_game/parking_q_rewards-train.png')
+        plt.savefig('parking_game/parking_q_stats-train.png')
     else:
-        plt.savefig('parking_game/parking_q_rewards-test.png')
+        plt.savefig('parking_game/parking_q_stats-test.png')
     plt.show()
 
 
@@ -730,14 +752,13 @@ def test_q(test_episodes, episodes_trained, render=True):
     successful_episodes = 0
 
     for episode in range(test_episodes):
-        print(f'Test Episode {episode}')
 
-        state = env.reset()[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=episode)[0]          # Reset environment at the beginning of episode
         terminated = False
         total_reward = 0
 
         
-        for step in range(max_steps):   # Agent controls the car until it parks or max steps reached
+        for _ in range(max_steps):   # Agent controls the car until it parks or max steps reached
 
             for event in pygame.event.get():            
                 if event.type == pygame.QUIT:       # If the user closes the window, the game stops
@@ -749,11 +770,11 @@ def test_q(test_episodes, episodes_trained, render=True):
 
             # select best action
             action = np.argmax(q[q_state_idx])
-            print(f"State: {state}       Action: {AgentAction(action).name:<10}", end=' ')
+            # print(f"State: {state}       Action: {AgentAction(action).name:<10}", end=' ')
 
             # Perform action
             state,reward,terminated,_,_ = env.step(action)
-            print(f"Reward: {reward}")
+            # print(f"Reward: {reward}")
             total_reward += reward
 
             if terminated:
@@ -775,5 +796,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    # train_q(50000, render=False, episodes_previously_trained=0, checkpoint=50001)
-    test_q(10, 50000, render=True)
+    train_q(8000, render=False, episodes_previously_trained=0, checkpoint=50001)
+    # test_q(1000, 7000, render=True)

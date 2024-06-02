@@ -1,0 +1,15 @@
+https://en.wikipedia.org/wiki/Q-learning
+
+https://en.wikipedia.org/wiki/Curriculum_learning
+
+Tutorials:
+
+https://www.baeldung.com/cs/q-learning-vs-deep-q-learning-vs-deep-q-network?fbclid=IwAR39qikwChNmlNU9Jb1UZZdo_tEv95P-xwPwrYEVTXqSx1GNTFJYdxw60pg
+
+https://www.javatpoint.com/q-learning-in-python
+
+https://towardsdatascience.com/q-learning-algorithm-from-explanation-to-implementation-cdbeda2ea187
+
+https://www.geeksforgeeks.org/q-learning-in-python/
+
+https://www.datacamp.com/tutorial/introduction-q-learning-beginner-tutorial

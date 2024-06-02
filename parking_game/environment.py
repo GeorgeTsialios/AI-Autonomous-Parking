@@ -580,7 +580,8 @@ max_steps = 600
 def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpoint=-1):
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
-    
+    seeds = [22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+
     if episodes_previously_trained > 0:
         q = np.load('parking_game/Q-tables/6000_random.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
     
@@ -594,8 +595,8 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     
     max_epsilon = 1.0
     min_epsilon = 0.0001
-    decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
-    alpha = 0.4   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
+    decay_rate = 0.0001  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
+    alpha = 1   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
     min_alpha = 0.1
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
 
@@ -606,7 +607,8 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     for episode in range(1, total_episodes+1):
         print(f"\nEpisode: {episode}")
-        state = env.reset(seed=22)[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=seeds[episode % 10])[0]          # Reset environment at the beginning of episode
+        # print(f"Seed: {seeds[episode % 10]}")
         terminated = False
         total_reward = 0
         episode_successes.append(0)
@@ -652,7 +654,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
         # Decrease epsilon and alpha
         # epsilon = max(epsilon - 1/total_episodes, min_epsilon)
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-        alpha = min_alpha + (0.4 - min_alpha) * np.exp(-decay_rate * episode)
+        alpha = min_alpha + (1 - min_alpha) * np.exp(-decay_rate * episode)
 
         episode_rewards.append(total_reward)
 
@@ -723,14 +725,14 @@ def plot_graphs(episode_rewards, episode_successes=None, train=False, step=100):
 def test_q(test_episodes, episodes_trained, render=True):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
-
+    seeds = [22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
     q = np.load('parking_game/Q-tables/parking_q_' + str(episodes_trained) + '.npy')  # load Q Table from file
 
     episode_rewards = []
     successful_episodes = 0
 
     for episode in range(1, test_episodes+1):
-        state = env.reset(seed=22)[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=seeds[episode % 10])[0]          # Reset environment at the beginning of episode
         terminated = False
         total_reward = 0
 
@@ -779,5 +781,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(8000, render=False, episodes_previously_trained=0, checkpoint=15000)
-    # test_q(10, 14000, render=False)
+    # train_q(20000, render=False, episodes_previously_trained=0, checkpoint=15000)
+    test_q(100, 18000, render=True)
