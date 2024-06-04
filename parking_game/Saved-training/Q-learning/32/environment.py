@@ -9,8 +9,6 @@
 # The player car will be controlled by an AI agent, which will use Q-learning to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
 # The agent's states will consist of the 8 depth sensors, the velocity of the car, the angle of the car and the distance between the center of the car and the center of the parking spot. However, these features will be discretized into a smaller number of bins. This way we can reduce the state space size. 
 # The agent will have a Q-table, which will be updated after each action. The agent will have a reward system, which will give a reward of 100 if the car is parked in the parking spot, and -20 if the car collides with an object or goes out of the window. The agent will have a discount factor of 0.9 and a learning rate of 0.1. The agent will have an epsilon value of 0.1, which will be used for epsilon-greedy exploration. The agent will have a maximum of 400 episodes to learn how to park the car.
-# SOS! THIS IS VERY IMPORTANT FOR Q LEARNING TO WORK: I have noticed that some combinations of observations such as the car's velocity, angle and radars's distances are not possible. Howver, if we store all combinations in the Q table, this will inevitably lead to elements in the Q table remaining 0 forever, as the agent will never reach these states. This is problem because in order for Q learning to converge, all elements in the Q table must be updated. To solve this, we can use a hash table, which will store only the states that the agent has visited. This way we can reduce the size of the Q table and make it more efficient.
-
 
 
 import ast
@@ -158,16 +156,12 @@ class ParkingGameEnv(gym.Env):
         self.car.reset(seed=seed)
 
         # Construct the observation state:
-        # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, velocity, angle, distance]
+       # [radar0, radar1, radar2, radar3, offset_x, offset_y, velocity, angle]
         state = list(self.car.discretize_state())
         obs = np.array(state).astype(np.int8)
         
         # Additional info to return. For debugging or whatever.
         info = {}
-
-        # Render environment
-        # if(self.render_mode=='human'):
-        #     self.render()
 
         # Return observation and info
         return obs, info
@@ -246,11 +240,7 @@ class AbstractCar:
         self.img = self.IMG
         self.max_vel = max_vel
         self.vel = 0
-        # self.angle = random.randint(0, 360)
-        # self.x, self.y = self.calculate_START_POS()
         self.acceleration = 0.1
-        # self.last_x, self.last_y = self.x, self.y
-        # self.rotate_center()
         self.fps = fps
         self.distance = 0
         self.count = 1
@@ -305,7 +295,6 @@ class AbstractCar:
 
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
-            # print(f"Volume is: {max(min(abs(self.vel * 0.01), 0.02), 0.008)}")
             # collision_sound.play()
             collides = True
             self.bounce()
@@ -603,7 +592,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     
     max_epsilon = 1.0
     min_epsilon = 0.0001
-    decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
+    decay_rate = 0.0001  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
     alpha = 0.9   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
     min_alpha = 0.1
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
@@ -627,13 +616,12 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
                     if episode > 100:
                         np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
                         print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
-                        plot_graphs(episode_rewards, train=True)
+                        plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
                     pygame.quit()
                     sys.exit()
 
             state_tuple = tuple(state)
       
-            # state_index = states.index(state_tuple)
             # Select action based on epsilon-greedy
             if random.random() < epsilon:
                 # select random action
@@ -671,7 +659,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
         if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
             print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
-            plot_graphs(episode_rewards, train=True)
+            plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
             print(f"\nCurrent episode: {episode}")
             checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
             if checkpoint == 0:
@@ -683,7 +671,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)    # Save Q-Table after training
     print_stats(training_start, epsilon, episode_rewards, episode_successes, total_episodes) 
-    plot_graphs(episode_rewards, train=True, step=100)    # Graph rewards
+    plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
 
 
 def print_stats(training_start, epsilon, episode_rewards, episode_successes, episodes_currently_trained, step=100, episodes_previously_trained=0):
@@ -700,21 +688,33 @@ def print_stats(training_start, epsilon, episode_rewards, episode_successes, epi
     for i in range((episodes_currently_trained - episodes_previously_trained) //step):
         print(f"{episodes_previously_trained + (i*step):5} -{episodes_previously_trained + ((i+1)*step):5}: mean episode success: {(np.mean(episode_successes[i*step:(i+1)*step]) * 100)} %")
 
-def plot_graphs(episode_rewards, train=False, step=100):
+def plot_graphs(episode_rewards, episode_successes=None, train=False, step=100):
+    '''
+        Create 1 figure with 2 vertically stacked subplots.
+        The 1st subplot is the mean reward per step episodes.
+        The 2nd subplot is the mean success rate per step episodes.
+        Then save the figure as a .png file.
+    '''
+    fig, axs = plt.subplots(2, sharex=True, figsize=(8, 10))
+
     mean_reward = np.mean(episode_rewards)
-    std_reward = np.std(episode_rewards)        # standard deviation
-
+    std_reward = np.std(episode_rewards)
     mean_episode_rewards = [np.mean(episode_rewards[i:i+step]) for i in range(0, len(episode_rewards), step)]
-    plt.plot([i*step for i in range(len(mean_episode_rewards))], mean_episode_rewards)
+    axs[0].plot([i*step for i in range(len(mean_episode_rewards))], mean_episode_rewards)
+    axs[0].set_ylabel('Reward')
+    axs[0].set_title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
 
-    # plt.plot(episode_rewards)
-    plt.xlabel('Episode')
-    plt.ylabel('Reward')
-    plt.title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
+    if episode_successes is not None:
+        mean_successes = [np.mean(episode_successes[i:i+step]) for i in range(0, len(episode_successes), step)]
+        axs[1].plot([i*step for i in range(len(mean_successes))], mean_successes)
+        axs[1].set_xlabel('Episode')
+        axs[1].set_ylabel('Success Rate')
+        axs[1].set_title(f'Q-Learning Success Rate')
+
     if train:
-        plt.savefig('parking_game/parking_q_rewards-train.png')
+        plt.savefig('parking_game/parking_q_stats-train.png')
     else:
-        plt.savefig('parking_game/parking_q_rewards-test.png')
+        plt.savefig('parking_game/parking_q_stats-test.png')
     plt.show()
 
 
@@ -722,7 +722,7 @@ def test_q(test_episodes, episodes_trained, render=True):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
 
-    q = np.load('parking_game/Q-tables/parking_q_' + str(episodes_trained) + '.npy')  # load Q Table from file
+    q = np.load('parking_game/Saved-Training/Q-Learning/32/parking_q_' + str(episodes_trained) + '.npy')  # load Q Table from file
 
     episode_rewards = []
     successful_episodes = 0
@@ -777,5 +777,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    # train_q(8000, render=False, episodes_previously_trained=0, checkpoint=62000)
-    test_q(1000, 8000, render=False)
+    # train_q(20000, render=False, episodes_previously_trained=0, checkpoint=-15000)
+    test_q(1000, 19000, render=False)
