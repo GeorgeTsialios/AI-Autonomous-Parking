@@ -271,7 +271,7 @@ class AbstractCar:
 
     def rotate(self, left=False, right=False):
         if abs(self.vel) > 0:        # if the car is moving, it can rotate.
-            turning_factor = 0.85 #if self.vel <= self.max_vel * 2/3 else 0.7     # the turning factor depends on the velocity of the car. The higher the velocity, the less the car will turn. This is because the car has inertia and it is harder to turn it when it is moving faster.  
+            turning_factor = 0.85 if self.vel <= self.max_vel * 2/3 else 0.5     # the turning factor depends on the velocity of the car. The higher the velocity, the less the car will turn. This is because the car has inertia and it is harder to turn it when it is moving faster.  
             if left:
                 self.angle += turning_factor * self.vel              # When turning, the angle of the car changes depending on its velocity. The higher the velocity, the more the angle changes.
             elif right:
@@ -282,7 +282,7 @@ class AbstractCar:
         self.move()
 
     def move_backward(self):    # move backward with half the max speed
-        self.vel = max(self.vel - self.acceleration, -self.max_vel)   # max because these are negative values, we are still choosing the lower speed
+        self.vel = max(self.vel - self.acceleration, -self.max_vel * 2/3)   # max because these are negative values, we are still choosing the lower speed
         self.move()
 
     def move(self):
@@ -312,48 +312,14 @@ class AbstractCar:
         initialize_game()
         self.check_radars(PARKING_LOT_BORDER_MASK)
 
-    # def check_radars(self, game_map):             # 8 RADARS
-    #     self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
-    #     degrees = [45, 75, 105, 135, 225, 255, 285, 315]
-    #     # degrees = [0, 45, 90, 135, 180, 225, 270, 315]
-    #     step_size = 20
-    #     for i in range(8):
-    #         length = 30 if degrees[i] % 45 == 0 else 45                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
-    #         offset = 23 if degrees[i] % 45 == 0 else 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
-    #         collide = False
-
-    #         while True:
-    #             test_x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degrees[i]))) * length)
-    #             test_y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degrees[i]))) * length)
-    #             if (test_x <= 0 or test_x >= 750) or (test_y <= 0 or test_y >= 750) or game_map.get_at((test_x, test_y)) != 0:
-    #                 collide = True
-    #                 break
-    #             x = test_x
-    #             y = test_y
-    #             if length + step_size > 245:        # so that we achieve a max distance of 205
-    #                 break
-    #             length = length + step_size
-            
-    #         if collide:                             # if the radar collides with an object, we move it back by 1 repeatedly, until it is no longer colliding
-    #             while length > 0:
-    #                 length = length - 1
-    #                 x = int(self.center[0] + math.cos(math.radians(360 - (self.angle + degrees[i]))) * length)
-    #                 y = int(self.center[1] + math.sin(math.radians(360 - (self.angle + degrees[i]))) * length)
-    #                 if (x > 0 and x < 750) and (y > 0 and y < 750) and game_map.get_at((x, y)) == 0:
-    #                     break
-
-    #         # dist = round(math.sqrt(math.pow(x - self.center[0], 2) + math.pow(y - self.center[1], 2)) - offset, 1)
-    #         distance = length - offset          # the real distance of each radar is the length of the radar minus its offset
-    #         # print(f" Radar {degrees[i]}: {distance}")
-    #         self.radars[i] = [(x, y), distance]
-
-    def check_radars(self, game_map):
-        self.radars = [[(0, 0), 0] for _ in range(4)]
-        degrees = [75, 105, 255, 285]
-        step_size = 13
-        for i in range(4):
-            length = 44                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
-            offset = 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
+    def check_radars(self, game_map):             # 8 RADARS
+        self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
+        degrees = [45, 75, 105, 135, 225, 255, 285, 315]
+        # degrees = [0, 45, 90, 135, 180, 225, 270, 315]
+        step_size = 20
+        for i in range(8):
+            length = 30 if degrees[i] % 45 == 0 else 45                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
+            offset = 23 if degrees[i] % 45 == 0 else 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
             collide = False
 
             while True:
@@ -364,7 +330,7 @@ class AbstractCar:
                     break
                 x = test_x
                 y = test_y
-                if length + step_size > 70:        # so that we achieve a max distance of 70
+                if length + step_size > 245:        # so that we achieve a max distance of 205
                     break
                 length = length + step_size
             
@@ -380,6 +346,7 @@ class AbstractCar:
             distance = length - offset          # the real distance of each radar is the length of the radar minus its offset
             # print(f" Radar {degrees[i]}: {distance}")
             self.radars[i] = [(x, y), distance]
+
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
     IMG = RED_CAR[0]
@@ -419,24 +386,24 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
     #     return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], velocity, angle, distance_discrete
 
     def discretize_state(self):
-        previous_distance = self.distance
-        for radar in self.radars:
-            radar[1] = int(radar[1] < 30)           # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
-        # print(f"Discretized radar 1: {self.radars[0][1]}   Discretized radar 2: {self.radars[1][1]}    Discretized radar 3: {self.radars[2][1]}    Discretized radar 4: {self.radars[3][1]}") 
-        discrete_vel = 1 if  self.vel >= 0.2 else -1 if self.vel <= -0.2 else 0       # The discretized velocity has 3 bins, in range [-1, 1]
-        # print(f"Self.vel: {self.vel:.2f}    discrete_vel: {discrete_vel}")       
-        discrete_angle = -(-math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) //2)  if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) // 2   # The discretized angle has 7 bins, in range [-3, 3]
-        # print(f"Self.angle: {self.angle:.2f}    discrete_angle: {discrete_angle}") 
-        self.distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))     # the distance of the car to the center of the parking spot
-        # distance_discrete = 9 if self.distance >= 150 else self.distance // 25 + 3 if self.distance >= 50 else self.distance // 10          # The discretized distance has 10 bins, in range [0, 9]
-        # print(f"Distance: {self.distance}    Distance discrete: {distance_discrete}")
-        self.difference = 1  if previous_distance - self.distance > 0 else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
-        # print(f"Difference: {self.difference}     Previous distance: {previous_distance}    Distance: {self.distance}")
-        offset_x = 1 if self.center[0] - free_spot_rect.centerx > 10 else -1 if self.center[0] - free_spot_rect.centerx < -10 else 0       # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
-        offset_y = 1 if self.center[1] - free_spot_rect.centery > 5 else -1 if self.center[1] - free_spot_rect.centery < -5 else 0      # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
-        # print(f"Offset x: {offset_x}    Offset y: {offset_y} Angle: {discrete_angle}")
-
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], offset_x, offset_y, discrete_vel, discrete_angle
+        previous_distance = self.distance 
+        # for radar in self.radars:
+        #     radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
+        # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
+        discrete_vel = int(round(self.vel, 1) * 10)      
+        # print(f"Discrete_vel: {discrete_vel}")       
+        discrete_angle = int((self.angle + 90) % 360)
+        print(f"Discrete_angle: {discrete_angle}", end=" ") 
+        self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
+        # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
+        # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
+        self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+        # print(f"Difference: {self.difference}", end=" ")
+        offset_x = self.center[0] - free_spot_rect.centerx        # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
+        offset_y = self.center[1] - free_spot_rect.centery     # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
+        # print(f"Offset x: {offset_x} Offset y: {offset_y}")
+        
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
 
 def draw_window(player_car):
     WIN.blit(PARKING_LOT, (0, 0))
@@ -492,7 +459,7 @@ game_run = True
 clock = pygame.time.Clock()
 FPS = 20
 initialize_game()
-player_car = PlayerCar(2)
+player_car = PlayerCar(6)
 states_to_add = []
 
 new_img = None
