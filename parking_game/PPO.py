@@ -24,6 +24,10 @@ from gymnasium.utils.env_checker import check_env
 from enum import Enum
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.logger import configure
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 # Register this module as a gym environment. Once registered, the id is usable in gym.make().
 register(
@@ -94,8 +98,8 @@ class ParkingGameEnv(gym.Env):
         self.render_mode = render_mode
 
         # Initialize the Parking problem
-        # self.car = AgentCar(6, fps=self.metadata['render_fps'])
-        self.car = PlayerCar(6, fps=self.metadata['render_fps'])            # change to this to control the car with arrow keys
+        self.car = AgentCar(6, fps=self.metadata['render_fps'])
+        # self.car = PlayerCar(6, fps=self.metadata['render_fps'])            # change to this to control the car with arrow keys
 
         # Gym requires defining the action space. The action space is the agent's set of possible actions.
         # Training code can call action_space.sample() to randomly select an action. 
@@ -112,6 +116,8 @@ class ParkingGameEnv(gym.Env):
         )
 
         self.clock = pygame.time.Clock()
+        self.max_steps = 600
+        self.successes = 0
     
     def initialize_game(car_spawn_index):
         # start_up_sound.play()
@@ -154,6 +160,8 @@ class ParkingGameEnv(gym.Env):
         # Reset the Parking Optionally, pass in seed control randomness and reproduce scenarios.
         self.car.reset(seed=seed)
 
+        self.current_step = 0
+
         # Construct the observation state:
        # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
         state = list(self.car.discretize_state())
@@ -168,9 +176,15 @@ class ParkingGameEnv(gym.Env):
     # Gym required function (and parameters) to perform an action
     def step(self, action):
 
+        for event in pygame.event.get():            
+            if event.type == pygame.QUIT:       # If the user closes the window, the game stops
+                pygame.quit()
+                sys.exit()
+
+        self.current_step += 1
         self.car.check_radars(PARKING_LOT_BORDER_MASK)
-        # self.car.move_player(AgentAction(action))           # Perform action
-        self.car.move_player()                            # Change to this to control the car with arrow keys
+        self.car.move_player(AgentAction(action))           # Perform action
+        # self.car.move_player()                            # Change to this to control the car with arrow keys
         terminated, collides, inside_spot = self.car.check_collision()
 
         # Construct the observation state:
@@ -183,6 +197,7 @@ class ParkingGameEnv(gym.Env):
 
         if terminated:
             # print("TERMINATED", end=" ")
+            self.successes += 1
             reward += 5000    
         else:
             reward -= 7                                # punish the car for not being parked
@@ -195,13 +210,15 @@ class ParkingGameEnv(gym.Env):
                     reward += 5
             
             else:
-                if state[10] == 0:    # punish the car for being stationary when it has not parked
+                if abs(state[10]) < 10:    # punish the car for moving too slow when it has not parked
                     # print("BEING STATIONARY OUTSIDE OF PARKING SPOT", end=" ")
                     reward -= 2
                 if collides:
                     # print("COLLIDING", end=" ")
                     reward -= 1000              # punish the car for colliding with an object
 
+        if self.current_step >= self.max_steps:
+            terminated = True
         # Additional info to return. For debugging or whatever.
         info = {}
 
@@ -581,9 +598,13 @@ if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
 # Train using PPO algorithm (either from scratch or continue training)
-def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpoint=-1):
+def train_PPO(total_episodes, render=False, episodes_previously_trained=0, run=1):
+
+    t_start = time.time()
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
+    env = Monitor(env)  # Wrap the environment to log episode statistics
+    env = DummyVecEnv([lambda: env])  # Vectorize the environment to run multiple parallel environments for better performance
 
     if episodes_previously_trained > 0:
         pass
@@ -592,89 +613,16 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     # print(model.policy) # print the model's network architecture
 
-    TIMESTEPS = total_episodes * max_steps
-     
-    for i in range(1, 5):
+    checkpoint_callback = CheckpointCallback(save_freq=10000, save_path='parking_game/PPO-models', name_prefix=f'ppo_model-{run}')
 
-        model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"run{i}")
-        model.save(f"{models_dir}/{total_episodes*i}")
+    TIMESTEPS = total_episodes * max_steps 
 
-    # episode_rewards = []
-    # episode_successes = []      # 1 if car parked, 0 if not
-
-    # training_start = time.time()          
-
-    # for episode in range(1, total_episodes+1):
-    #     print(f"\nEpisode: {episode}")
-    #     state = env.reset()[0]          # Reset environment at the beginning of episode
-    #     # print(f"Seed: {seeds[episode % 10]}")
-    #     terminated = False
-    #     total_reward = 0
-    #     episode_successes.append(0)
-        
-    #     for _ in range(max_steps):       # Agent controls the car until it parks or max steps reached
-
-    #         for event in pygame.event.get():            
-    #             if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-    #                 if episode > 100:
-    #                     np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
-    #                     print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
-    #                     plot_graphs(episode_rewards, train=True)
-    #                 pygame.quit()
-    #                 sys.exit()
-
-    #         state_tuple = tuple(state)
-      
-    #         # Select action based on epsilon-greedy
-    #         if random.random() < epsilon:
-    #             # select random action
-    #             action = env.action_space.sample()
-    #         else:                
-    #             # select best action
-    #             action = np.argmax(q[state_tuple])      
-            
-    #         # Perform action
-    #         new_state,reward,terminated,_,_ = env.step(action)
-    #         total_reward += reward
-
-    #         state_action_tuple = state_tuple + (action,)
-    #         new_state_tuple = tuple(new_state)
-
-    #         # new_state_index = states.index(tuple(new_state))
-    #         q[state_action_tuple] = q[state_action_tuple] + alpha * (reward + gamma * np.max(q[new_state_tuple]) - q[state_action_tuple])
-
-    #         if terminated:
-    #             episode_successes[-1] = 1
-    #             break
-
-    #         # Update current state
-    #         state = new_state
-
-    #     # Decrease epsilon and alpha
-    #     # epsilon = max(epsilon - 1/total_episodes, min_epsilon)
-    #     epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-    #     alpha = min_alpha + (1 - min_alpha) * np.exp(-decay_rate * episode)
-
-    #     episode_rewards.append(total_reward)
-
-    #     if episode % 500 == 0:     # Save Q-Table every 1000 episodes
-    #         np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
-
-    #     if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
-    #         print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
-    #         plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)
-    #         print(f"\nCurrent episode: {episode}")
-    #         checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
-    #         if checkpoint == 0:
-    #             np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
-    #             pygame.quit()
-    #             sys.exit()    
+    model.learn(total_timesteps=TIMESTEPS, callback=checkpoint_callback, tb_log_name="PPO")
 
     env.close()
 
-    # np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)    # Save Q-Table after training
-    # print_stats(training_start, epsilon, episode_rewards, episode_successes, total_episodes) 
-    # plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
+    training_time = time.time() - t_start
+    print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
 
 
 def print_stats(training_start, epsilon, episode_rewards, episode_successes, episodes_currently_trained, step=100, episodes_previously_trained=0):
@@ -721,113 +669,64 @@ def plot_graphs(episode_rewards, episode_successes=None, train=False, step=100):
     plt.show()
 
 
-def test_q(test_episodes, episodes_trained, render=True):
+def test_PPO(test_episodes, run, steps_trained, render=True):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
-    model_path = f"{models_dir}/{episodes_trained}.zip"
+    rewards = []
+    model_path = f"{models_dir}/ppo_model-{run}_{steps_trained}_steps.zip"
     model = PPO.load(model_path, env=env)
 
     for episode in range(1, test_episodes+1):
-        state = env.reset()[0]
-        terminated = False
-        for _ in range(max_steps):
-
-            for event in pygame.event.get():            
-                if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-                    # if episode > 100:
-                    #     np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
-                    #     print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
-                    #     plot_graphs(episode_rewards, train=True)
-                    pygame.quit()
-                    sys.exit()
-
-            # action, _states = model.predict(state)
-            action, _ = model.predict(state)
-            new_state,reward,terminated,_,_ = env.step(action)
-            if terminated:
-                break
-            state = new_state
-
-    # episode_rewards = []
-    # successful_episodes = 0
-
-    # for episode in range(1, test_episodes+1):
-    #     state = env.reset()[0]          # Reset environment at the beginning of episode
-    #     terminated = False
-    #     total_reward = 0
-
-        
-    #     for step in range(max_steps):   # Agent controls the car until it parks or max steps reached
-
-    #         for event in pygame.event.get():            
-    #             if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-    #                 pygame.quit()
-    #                 sys.exit()
-
-    #         state_tuple = tuple(state)
-    #         # Select best action based on Q Table
-    #         action = np.argmax(q[state_tuple])
-
-    #         if render:
-    #             print(f"State: {state}       Action: {AgentAction(action).name:<10}", end=' ')
-
-    #         # Perform action
-    #         state,reward,terminated,_,_ = env.step(action)
-    #         if render:
-    #             print(f"Reward: {reward:.2f}")
-    #         total_reward += reward
-
-    #         if terminated:
-    #             successful_episodes += 1
-    #             break
-
-    #     print(f'\nTest Episode {episode} Reward: {total_reward:.2f}')
-    #     episode_rewards.append(total_reward)
-
-    # env.close()
-
-    # step = 100
-    # print(f"\nMean reward per {step} episodes")
-    # for i in range(test_episodes //step):
-    #     print(f"{(i*step):5} -{((i+1)*step):5}: mean episode reward: {round(np.mean(episode_rewards[i*step:(i+1)*step]),3)}")
-    
-    # # Graph success rate
-    # print(f'\nAgent {episodes_trained} Success Rate: {successful_episodes}/{test_episodes}')
-    
-    # plot_graphs(episode_rewards, step=10)    # Graph rewards
-
-
-
-if __name__ == '__main__':
-
-    env = gym.make('parking-game-v0', render_mode='human')
-    episodes = 10
-    rewards = []
-
-    for episode in range(1, episodes+1):
         terminated = False
         total_reward = 0
         state = env.reset(seed=episode)[0]
 
-        for step in range(max_steps):
-            for event in pygame.event.get():            
-                if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-                    pygame.quit()
-                    sys.exit()
+        while not terminated:
+            action,_ = model.predict(state)
+            state, reward, terminated,_,_ = env.step(action)
+            total_reward += reward
+            print(f"Step: {env.current_step} Action: {AgentAction(action).name:<10} -> State: {state}", end=' ')
+            # print(f"State: {state}", end=' ')
+            print(f'Reward: {reward:.2f}') 
+        
+        rewards.append(total_reward)
+
+    print("\n")
+    for episode in range(1, test_episodes+1):
+        print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
+    print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+    print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
+
+def test_random_agent(test_episodes, render=True):
+    env = gym.make('parking-game-v0', render_mode='human' if render else None)
+    rewards = []
+
+    for episode in range(1, test_episodes+1):
+        terminated = False
+        total_reward = 0
+        state = env.reset(seed=episode)[0]
+
+        while not terminated:
             random_action = env.action_space.sample()
             state,reward,terminated,_,_ = env.step(random_action)
             total_reward += reward
-            # print(f"Step: {step} State: {state} Action: {AgentAction(random_action).name:<10}", end=' ')
-            print(f"State: {state}", end=' ')
+            print(f"Step: {env.current_step} Action: {AgentAction(random_action).name:<10} -> State: {state}", end=' ')
+            # print(f"State: {state}", end=' ')
             print(f'Reward: {reward:.2f}') 
-            if terminated:
-                break   
 
         rewards.append(total_reward)
 
-    for episode in range(1, episodes+1):
-        print(f'\nEpisode {episode} Reward: {rewards[episode-1]:.2f}')
+    print("\n")
+    for episode in range(1, test_episodes+1):
+        print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
+    print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+    print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
+
+
+if __name__ == '__main__':
+
+    # test_random_agent(10, render=False)
             
     # Train/test using PPO
-    # train_q(10, render=False, episodes_previously_trained=0, checkpoint=15000)
-    # test_q(100, 18000, render=True)
+    # train_PPO(1000, render=False, episodes_previously_trained=0, run='test')
+    test_PPO(10,'test', 600000, render=False)
