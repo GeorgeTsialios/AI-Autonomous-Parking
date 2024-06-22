@@ -28,7 +28,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecMoni
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.atari_wrappers import MaxAndSkipEnv
+from stable_baselines3.common.atari_wrappers import MaxAndSkipEnv 
 
 
 # Register this module as a gym environment. Once registered, the id is usable in gym.make().
@@ -253,20 +253,26 @@ class ParkingGameEnv(gym.Env):
                     reward -= 2
                 if collides:
                     # print("COLLIDING", end=" ")
-                    reward -= 1000              # punish the car for colliding with an object
+                    reward -= 100             # punish the car for colliding with an object
 
-        if self.current_step >= self.max_steps:
-            terminated = True
         # Additional info to return. For debugging or whatever.
         info = {}
+        
+        if self.current_step >= self.max_steps:
+            truncated = True
+            terminated = True
+            info['truncated'] = True
+        else:
+            truncated = False
+            info['truncated'] = False
 
         # Render environment
         if(self.render_mode == 'human'):
             # print(AgentAction(action))
             self.render()
 
-        # Return observation, reward, terminated, truncated (not used), info
-        return obs, reward, terminated, False, info
+        # Return observation, reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, info
     
     # Gym required function to render environment
     def render(self):
@@ -648,8 +654,8 @@ def train_PPO(total_episodes, render=False, episodes_previously_trained=0, run=1
     if episodes_previously_trained > 0:
         model = PPO.load(f"{models_dir}/ppo_model-{run}_{episodes_previously_trained * max_steps}_steps.zip", env=env, tensorboard_log=log_dir)
     else:
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
-
+        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu")       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
+                                                                                              # Change device to "cuda" for GPU training or "cpu" for CPU training
     # print(model.policy) # print the model's network architecture
 
     checkpoint_callback = CheckpointCallback(save_freq=50000, save_path='parking_game/PPO-models', name_prefix=f'ppo_model-{run}')
@@ -677,12 +683,13 @@ def test_PPO(test_episodes, run, steps_trained, render=True):
 
     for episode in range(1, test_episodes+1):
         terminated = False
+        truncated = False
         total_reward = 0
         state = env.reset(seed=episode)[0]
 
-        while not terminated:
+        while not terminated and not truncated:
             action,_ = model.predict(state)
-            state, reward, terminated,_,_ = env.step(action)
+            state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
             print(f"Step: {env.current_step} Action: {AgentAction(action).name:<10} -> State: {state}", end=' ')
             # print(f"State: {state}", end=' ')
@@ -727,5 +734,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    # train_PPO(1000, render=False, episodes_previously_trained=0, run=5)
-    test_PPO(10, 5, 50000, render=True)
+    train_PPO(6500, render=False, episodes_previously_trained=0, run=7)
+    # test_PPO(10, 5, 50000, render=True)
