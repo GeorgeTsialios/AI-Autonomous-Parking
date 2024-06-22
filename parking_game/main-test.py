@@ -319,7 +319,7 @@ class AbstractCar:
         step_size = 20
         for i in range(8):
             length = 30 if degrees[i] % 45 == 0 else 45                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
-            offset = 23 if degrees[i] % 45 == 0 else 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
+            offset = 25 if degrees[i] % 45 == 0 else 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
             collide = False
 
             while True:
@@ -385,22 +385,42 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
     #     # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
     #     return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], velocity, angle, distance_discrete
 
+    # def discretize_state(self):           PPO 1
+    #     previous_distance = self.distance 
+    #     # for radar in self.radars:
+    #     #     radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
+    #     # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
+    #     discrete_vel = int(round(self.vel, 1) * 10)      
+    #     # print(f"Discrete_vel: {discrete_vel}", end=" ")       
+    #     discrete_angle = int((self.angle + 90) % 360)
+    #     # print(f"Discrete_angle: {discrete_angle}", end=" ") 
+    #     self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
+    #     # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
+    #     # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
+    #     self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+    #     # print(f"Difference: {self.difference}", end=" ")
+    #     offset_x = self.center[0] - free_spot_rect.centerx        # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
+    #     offset_y = self.center[1] - free_spot_rect.centery     # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
+    #     # print(f"Offset x: {offset_x} Offset y: {offset_y}")
+        
+    #     return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
+
     def discretize_state(self):
         previous_distance = self.distance 
-        # for radar in self.radars:
-        #     radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
+        for radar in self.radars:
+            radar[1] = round(radar[1] / 205, 2) 
         # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
-        discrete_vel = int(round(self.vel, 1) * 10)      
+        discrete_vel = round(self.vel / 6, 2) if self.vel >= 0 else round(self.vel / 4, 2)     
         # print(f"Discrete_vel: {discrete_vel}")       
-        discrete_angle = int((self.angle + 90) % 360)
-        print(f"Discrete_angle: {discrete_angle}", end=" ") 
+        discrete_angle = round(((self.angle + 90) % 360) / 360, 2)
+        # print(f"Discrete_angle: {discrete_angle}", end=" ") 
         self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
         self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
         # print(f"Difference: {self.difference}", end=" ")
-        offset_x = self.center[0] - free_spot_rect.centerx        # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
-        offset_y = self.center[1] - free_spot_rect.centery     # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
+        offset_x = round((self.center[0] - free_spot_rect.centerx) / 551.65, 2)     # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
+        offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
         # print(f"Offset x: {offset_x} Offset y: {offset_y}")
         
         return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
@@ -480,9 +500,7 @@ while game_run:
     # player_car.discretize_state()
     parked = player_car.check_collision()
     state = list(player_car.discretize_state())
-    state.append(int(parked))
-    state = tuple(state)
-    # print(f"State: {state}")
+    print(f"State: {state}")
     player_car.move_player()
     draw_window(player_car)
 

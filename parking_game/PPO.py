@@ -20,14 +20,16 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.envs.registration import register
-from gymnasium.utils.env_checker import check_env
 from enum import Enum
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.logger import configure
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecMonitor
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
+from stable_baselines3.common.utils import set_random_seed
+from stable_baselines3.common.atari_wrappers import MaxAndSkipEnv
+
 
 # Register this module as a gym environment. Once registered, the id is usable in gym.make().
 register(
@@ -87,6 +89,42 @@ PARKING_LOT_BORDER_MASK = None
 
 
 
+class SkipEnv(gym.Wrapper[np.ndarray, int, np.ndarray, int]):
+    """
+    Return only every ``skip``-th frame (frameskipping)
+
+    :param env: Environment to wrap
+    :param skip: Number of ``skip``-th frame
+        The same action will be taken ``skip`` times.
+    """
+
+    def __init__(self, env: gym.Env, skip: int = 4) -> None:
+        super().__init__(env)
+        assert env.observation_space.dtype is not None, "No dtype specified for the observation space"
+        assert env.observation_space.shape is not None, "No shape defined for the observation space"
+        self._skip = skip
+
+    def step(self, action: int):
+        """
+        Step the environment with the given action
+        Repeat action, sum reward, and observe the final state.
+        
+        :param action: the action
+        :return: observation, reward, terminated, truncated, information
+        """
+        total_reward = 0.0
+        for _ in range(self._skip):
+            obs, reward, terminated, _,_ = self.env.step(action)
+            total_reward += reward
+            if terminated:
+                break
+
+        # Additional info to return. For debugging or whatever.
+        info = {}
+
+        return obs, total_reward, terminated, False, info
+
+
 class ParkingGameEnv(gym.Env):
     # metadata is a required attribute
     # render_modes in our environment is either None or 'human'.
@@ -109,10 +147,10 @@ class ParkingGameEnv(gym.Env):
         # The observation space is used to validate the observation returned by reset() and step().
         # Use a 1D vector: [radar0, radar1, radar2, radar3, offset_x, offset_y, velocity, angle]
         self.observation_space = spaces.Box(                                                # Box for continuous action space
-            low = np.array([0,    0,   0,   0,   0,   0,   0,   0, -479, -552, -40, 0]),
-            high = np.array([207, 207, 207, 207, 207, 207, 207, 207, 479, 552, 60, 359]),
+            low = np.array([0,  0, 0, 0, 0, 0, 0, 0, -1, -1, -1, 0]),
+            high = np.array([1, 1, 1, 1, 1, 1, 1, 1,  1,  1,  1, 1]),
             shape = (12,),
-            dtype = np.int16
+            dtype = np.float16
         )
 
         self.clock = pygame.time.Clock()
@@ -165,7 +203,7 @@ class ParkingGameEnv(gym.Env):
         # Construct the observation state:
        # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
         state = list(self.car.discretize_state())
-        obs = np.array(state).astype(np.int16)
+        obs = np.array(state).astype(np.float16)
         
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -190,7 +228,7 @@ class ParkingGameEnv(gym.Env):
         # Construct the observation state:
        # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
         state = list(self.car.discretize_state())
-        obs = np.array(state).astype(np.int16)
+        obs = np.array(state).astype(np.float16)
     
         # Calculate reward 
         reward = 0
@@ -210,7 +248,7 @@ class ParkingGameEnv(gym.Env):
                     reward += 5
             
             else:
-                if abs(state[10]) < 10:    # punish the car for moving too slow when it has not parked
+                if abs(state[10]) < 0.25:    # punish the car for moving too slow when it has not parked
                     # print("BEING STATIONARY OUTSIDE OF PARKING SPOT", end=" ")
                     reward -= 2
                 if collides:
@@ -496,20 +534,20 @@ class AbstractCar:
 
     def discretize_state(self):
         previous_distance = self.distance 
-        # for radar in self.radars:
-        #     radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
+        for radar in self.radars:
+            radar[1] = round(radar[1] / 205, 2) 
         # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
-        discrete_vel = int(round(self.vel, 1) * 10)      
-        # print(f"Discrete_vel: {discrete_vel}", end=" ")       
-        discrete_angle = int((self.angle + 90) % 360)
+        discrete_vel = round(self.vel / 6, 2) if self.vel >= 0 else round(self.vel / 4, 2)     
+        # print(f"Discrete_vel: {discrete_vel}")       
+        discrete_angle = round(((self.angle + 90) % 360) / 360, 2)
         # print(f"Discrete_angle: {discrete_angle}", end=" ") 
         self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
         self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
         # print(f"Difference: {self.difference}", end=" ")
-        offset_x = self.center[0] - free_spot_rect.centerx        # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
-        offset_y = self.center[1] - free_spot_rect.centery     # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
+        offset_x = round((self.center[0] - free_spot_rect.centerx) / 551.65, 2)     # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
+        offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
         # print(f"Offset x: {offset_x} Offset y: {offset_y}")
         
         return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
@@ -603,17 +641,18 @@ def train_PPO(total_episodes, render=False, episodes_previously_trained=0, run=1
     t_start = time.time()
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
+    env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
     env = Monitor(env)  # Wrap the environment to log episode statistics
     env = DummyVecEnv([lambda: env])  # Vectorize the environment to run multiple parallel environments for better performance
 
     if episodes_previously_trained > 0:
-        pass
+        model = PPO.load(f"{models_dir}/ppo_model-{run}_{episodes_previously_trained * max_steps}_steps.zip", env=env, tensorboard_log=log_dir)
     else:
         model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
 
     # print(model.policy) # print the model's network architecture
 
-    checkpoint_callback = CheckpointCallback(save_freq=10000, save_path='parking_game/PPO-models', name_prefix=f'ppo_model-{run}')
+    checkpoint_callback = CheckpointCallback(save_freq=50000, save_path='parking_game/PPO-models', name_prefix=f'ppo_model-{run}')
 
     TIMESTEPS = total_episodes * max_steps 
 
@@ -625,53 +664,13 @@ def train_PPO(total_episodes, render=False, episodes_previously_trained=0, run=1
     print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
 
 
-def print_stats(training_start, epsilon, episode_rewards, episode_successes, episodes_currently_trained, step=100, episodes_previously_trained=0):
-    training_time = time.time() - training_start
-    print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
-
-    print(f"\nEpsilon: {epsilon:.4f}")
-
-    print(f"\nMean reward per {step} episodes")
-    for i in range((episodes_currently_trained - episodes_previously_trained) //step):
-        print(f"{episodes_previously_trained + (i*step):5} -{episodes_previously_trained + ((i+1)*step):5}: mean episode reward: {round(np.mean(episode_rewards[i*step:(i+1)*step]),3)}")
-
-    print(f"\nMean success rate per {step} episodes")
-    for i in range((episodes_currently_trained - episodes_previously_trained) //step):
-        print(f"{episodes_previously_trained + (i*step):5} -{episodes_previously_trained + ((i+1)*step):5}: mean episode success: {(np.mean(episode_successes[i*step:(i+1)*step]) * 100):.2f} %")
-
-def plot_graphs(episode_rewards, episode_successes=None, train=False, step=100):
-    '''
-        Create 1 figure with 2 vertically stacked subplots.
-        The 1st subplot is the mean reward per step episodes.
-        The 2nd subplot is the mean success rate per step episodes.
-        Then save the figure as a .png file.
-    '''
-    fig, axs = plt.subplots(2, sharex=True, figsize=(8, 10))
-
-    mean_reward = np.mean(episode_rewards)
-    std_reward = np.std(episode_rewards)
-    mean_episode_rewards = [np.mean(episode_rewards[i:i+step]) for i in range(0, len(episode_rewards), step)]
-    axs[0].plot([i*step for i in range(len(mean_episode_rewards))], mean_episode_rewards)
-    axs[0].set_ylabel('Reward')
-    axs[0].set_title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
-
-    if episode_successes is not None:
-        mean_successes = [np.mean(episode_successes[i:i+step]) for i in range(0, len(episode_successes), step)]
-        axs[1].plot([i*step for i in range(len(mean_successes))], mean_successes)
-        axs[1].set_xlabel('Episode')
-        axs[1].set_ylabel('Success Rate')
-        axs[1].set_title(f'Q-Learning Success Rate')
-
-    if train:
-        plt.savefig('parking_game/parking_q_stats-train.png')
-    else:
-        plt.savefig('parking_game/parking_q_stats-test.png')
-    plt.show()
-
 
 def test_PPO(test_episodes, run, steps_trained, render=True):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
+    env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
+    env = Monitor(env)  # Wrap the environment to log episode statistics
+
     rewards = []
     model_path = f"{models_dir}/ppo_model-{run}_{steps_trained}_steps.zip"
     model = PPO.load(model_path, env=env)
@@ -710,7 +709,7 @@ def test_random_agent(test_episodes, render=True):
             random_action = env.action_space.sample()
             state,reward,terminated,_,_ = env.step(random_action)
             total_reward += reward
-            print(f"Step: {env.current_step} Action: {AgentAction(random_action).name:<10} -> State: {state}", end=' ')
+            print(f"Step: {env.unwrapped.current_step} Action: {AgentAction(random_action).name:<10} -> State: {state}", end=' ')
             # print(f"State: {state}", end=' ')
             print(f'Reward: {reward:.2f}') 
 
@@ -725,8 +724,8 @@ def test_random_agent(test_episodes, render=True):
 
 if __name__ == '__main__':
 
-    # test_random_agent(10, render=False)
+    # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    # train_PPO(1000, render=False, episodes_previously_trained=0, run='test')
-    test_PPO(10,'test', 600000, render=False)
+    # train_PPO(1000, render=False, episodes_previously_trained=0, run=5)
+    test_PPO(10, 5, 50000, render=True)
