@@ -238,8 +238,7 @@ class ParkingGameEnv(gym.Env):
             self.successes += 1
             reward += 5000    
         else:
-            reward -= 7                                # punish the car for not being parked
-            reward += self.car.difference * 0.7        # reward/ punishment for getting closer/ further from the center of the parking spot
+            reward -= self.car.distance / 730.26        # punishment for getting further from the center of the parking spot
         
             if inside_spot:
                 reward += 1.2                        # reward for being inside the parking spot
@@ -547,10 +546,10 @@ class AbstractCar:
         # print(f"Discrete_vel: {discrete_vel}")       
         discrete_angle = round(((self.angle + 90) % 360) / 360, 2)
         # print(f"Discrete_angle: {discrete_angle}", end=" ") 
-        self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
+        self.distance = round(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)), 2)    # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
-        self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+        # self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
         # print(f"Difference: {self.difference}", end=" ")
         offset_x = round((self.center[0] - free_spot_rect.centerx) / 551.65, 2)     # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
         offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
@@ -642,36 +641,34 @@ if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
 # Train using PPO algorithm (either from scratch or continue training)
-def train_PPO(total_episodes, render=False, episodes_previously_trained=0, run=1):
-
-    t_start = time.time()
+def train_PPO(total_episodes, render=False, steps_previously_trained=0, run=1):
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
     env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
     env = Monitor(env)  # Wrap the environment to log episode statistics
     env = DummyVecEnv([lambda: env])  # Vectorize the environment to run multiple parallel environments for better performance
 
-    if episodes_previously_trained > 0:
-        model = PPO.load(f"{models_dir}/ppo_model-{run}_{episodes_previously_trained * max_steps}_steps.zip", env=env, tensorboard_log=log_dir)
+
+    if steps_previously_trained > 0:
+        model_path = f"{models_dir}/ppo_model-{run}_{steps_previously_trained}_steps.zip"
+        model = PPO.load(model_path, env=env, tensorboard_log=log_dir)
     else:
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu")       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
+        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, ent_coef=0.01, device="cpu")       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
     # print(model.policy) # print the model's network architecture
 
-    checkpoint_callback = CheckpointCallback(save_freq=50000, save_path='parking_game/PPO-models', name_prefix=f'ppo_model-{run}')
+    checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'ppo_model-{run}')
 
     TIMESTEPS = total_episodes * max_steps 
 
-    model.learn(total_timesteps=TIMESTEPS, callback=checkpoint_callback, tb_log_name="PPO")
+    model.learn(total_timesteps=TIMESTEPS, callback=checkpoint_callback, tb_log_name="PPO", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
+    model.save(f"{models_dir}/ppo_model-{run}_{TIMESTEPS}_steps.zip")  # Save the model
 
     env.close()
 
-    training_time = time.time() - t_start
-    print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
 
 
-
-def test_PPO(test_episodes, run, steps_trained, render=True):
+def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
     env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
@@ -734,5 +731,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    train_PPO(6500, render=False, episodes_previously_trained=0, run=7)
-    # test_PPO(10, 5, 50000, render=True)
+    train_PPO(1000, render=False, steps_previously_trained=0, run=10)
+    # test_PPO(10, run=9, steps_trained=300000, render=True)
