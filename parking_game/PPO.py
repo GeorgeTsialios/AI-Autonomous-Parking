@@ -8,6 +8,8 @@
 # The radars will be drawn on the screen as lines.
 # The player car will be controlled by an AI agent, which will use Q-learning to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
 # The agent's states will consist of the 8 depth sensors, the offset between the center of the car and the center of the parking spot in the x axis, the offset between the center of the car and the center of the parking spot in the y axis, the velocity of the car, the angle of the car. However, these features will be discretized into a smaller number of bins. This way we can reduce the state space size. 
+# TEST
+
 
 import os
 import pygame
