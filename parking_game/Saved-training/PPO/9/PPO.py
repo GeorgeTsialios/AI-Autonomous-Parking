@@ -238,8 +238,7 @@ class ParkingGameEnv(gym.Env):
             self.successes += 1
             reward += 5000    
         else:
-            reward -= 7                                # punish the car for not being parked
-            reward += self.car.difference * 0.7        # reward/ punishment for getting closer/ further from the center of the parking spot
+            reward += self.car.difference * 1        # reward/ punishment for getting closer/ further from the center of the parking spot
         
             if inside_spot:
                 reward += 1.2                        # reward for being inside the parking spot
@@ -654,7 +653,7 @@ def train_PPO(total_episodes, render=False, episodes_previously_trained=0, run=1
     if episodes_previously_trained > 0:
         model = PPO.load(f"{models_dir}/ppo_model-{run}_{episodes_previously_trained * max_steps}_steps.zip", env=env, tensorboard_log=log_dir)
     else:
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu")       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
+        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu", ent_coef=0.01)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
     # print(model.policy) # print the model's network architecture
 
@@ -734,5 +733,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    # train_PPO(2000, render=False, episodes_previously_trained=0, run=7)
-    test_PPO(10, 7, 600000, render=True)
+    train_PPO(2000, render=False, episodes_previously_trained=0, run=9)
+    # test_PPO(10, 7, 600000, render=True)
