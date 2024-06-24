@@ -408,13 +408,14 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
     def discretize_state(self):
         previous_distance = self.distance 
         for radar in self.radars:
-            radar[1] = round(radar[1] / 205, 2) 
+            radar[1] = round(2 * (radar[1] / 205) - 1, 2)
         # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
         discrete_vel = round(self.vel / 6, 2) if self.vel >= 0 else round(self.vel / 4, 2)     
         # print(f"Discrete_vel: {discrete_vel}")       
-        discrete_angle = round(((self.angle + 90) % 360) / 360, 2)
+        discrete_angle = round(2 * (((self.angle) % 360) / 360) - 1, 2)
         # print(f"Discrete_angle: {discrete_angle}", end=" ") 
-        self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
+        self.distance = round(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)), 2)    # the distance of the car to the center of the parking spot
+        # print(f"Distance: {self.distance/ 730.26 :.2f}")
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
         self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
