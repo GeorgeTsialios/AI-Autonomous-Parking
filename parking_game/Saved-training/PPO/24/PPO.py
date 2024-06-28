@@ -144,9 +144,9 @@ class ParkingGameEnv(gym.Env):
         # The observation space is used to validate the observation returned by reset() and step().
         # Use a 1D vector: [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
         self.observation_space = spaces.Box(                                                # Box for continuous observation space
-            low = np.array([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]),
-            high = np.array([1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1, 1]),
-            shape = (13,),
+            low = np.array([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]),
+            high = np.array([1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]),
+            shape = (12,),
             dtype = np.float16
         )
 
@@ -174,7 +174,7 @@ class ParkingGameEnv(gym.Env):
                         9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                         10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-        free_spot_index = 8 if car_spawn_index == 1 else 3 # random.randint(6, 10) if car_spawn_index == 1 else random.randint(1, 5)     # the free spot will be on the same side of the player car
+        free_spot_index = random.randint(6, 10) if car_spawn_index == 1 else random.randint(1, 5)     # the free spot will be on the same side of the player car
         # print(f"Free spot: {free_spot_index}")
         parking_spots.pop(free_spot_index)
 
@@ -189,7 +189,7 @@ class ParkingGameEnv(gym.Env):
         return free_spot_index
 
     # Gym required function (and parameters) to reset the environment
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=30, options=None):
         super().reset(seed=seed) # gym requires this call to control randomness and reproduce scenarios.
 
         # Reset the Parking Optionally, pass in seed control randomness and reproduce scenarios.
@@ -225,8 +225,6 @@ class ParkingGameEnv(gym.Env):
         # Construct the observation state:
        # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
         state = list(self.car.discretize_state())
-        if inside_spot:
-            state[10] = -1
         obs = np.array(state).astype(np.float16)
     
         # Calculate reward 
@@ -238,30 +236,19 @@ class ParkingGameEnv(gym.Env):
             reward += 5000    
 
         elif inside_spot:
-            reward += 5 + 5 / (abs(state[11]) + 1)                      # reward for being inside the parking spot
-            if state[11] == 0:                   # extra reward for being stationary
+            reward += 3                  # reward for being inside the parking spot
+            if state[10] == 0:                   # extra reward for being stationary
                 # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
-                reward += 10
+                reward += 5
             
         else:
-            # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
-            reward -= abs(state[8]) * 6         
-            reward -= abs(state[9]) * 6
-
+            reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
+            if abs(state[10]) < 0.25:    # punish the car for moving too slow when it has not parked
+                # print("BEING STATIONARY OUTSIDE OF PARKING SPOT", end=" ")
+                reward -= 2
             if collides:
-                # print("TOO CLOSE")
-                reward -= 2             # punish the car for colliding with an object
-
-            if abs(state[8]) >= 0.2 or abs(state[9]) >= 0.2:    # when the car is far away from the parking spot
-                if abs(state[11]) < 0.25:    # punish the car for moving too slow 
-                     # print("BEING STATIONARY FAR AWAY PARKING SPOT", end=" ")
-                    reward -= 2
-            else:                     # when the car is near the parking spot
-                if abs(state[11]) < 0.1:    # punish the car for moving too slow 
-                     # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
-                    reward -= 2
-                if  abs(state[12]) < 0.05 or abs(state[12]) > 0.95:      # reward the car for being in the right angle
-                    reward += 1
+                # print("COLLIDING", end=" ")
+                reward -= 10             # punish the car for colliding with an object
 
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -555,7 +542,7 @@ class AbstractCar:
         # print(f"Discrete_vel: {discrete_vel}")       
         discrete_angle = round(2 * (((self.angle) % 360) / 360) - 1, 2)
         # print(f"Discrete_angle: {discrete_angle}", end=" ") 
-        self.distance = round(2 * (math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)) / 730.26) - 1, 2)    # the distance of the car to the center of the parking spot
+        self.distance = round(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)), 2)    # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
         # self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
@@ -564,7 +551,7 @@ class AbstractCar:
         offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
         # print(f"Offset x: {offset_x} Offset y: {offset_y}")
         
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, self.distance, discrete_vel, discrete_angle
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
@@ -662,7 +649,7 @@ def train_PPO(steps_to_train, render=False, steps_previously_trained=0, run=1):
         model_path = f"{models_dir}/ppo_model-{run}_{steps_previously_trained}_steps.zip"
         model = PPO.load(model_path, env=env, tensorboard_log=log_dir, device="cpu")  # Load the model
     else:
-        # policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[16])       # change the policy network architecture to a 3-layer neural network with 128 units each
+        # policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[128, 128, 128])       # change the policy network architecture to a 3-layer neural network with 128 units each
         model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu", ent_coef=0.01)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
     # print(model.policy) # print the model's network architecture
@@ -681,7 +668,6 @@ def train_PPO(steps_to_train, render=False, steps_previously_trained=0, run=1):
 
 def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
     
-    np.set_printoptions(linewidth=300)  # Adjust the linewidth as needed
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
     # env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
     env = Monitor(env)  # Wrap the environment to log episode statistics
@@ -697,10 +683,12 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
         state = env.reset()[0]
 
         while not terminated and not truncated:
-            action,_ = model.predict(state, deterministic=True)
+            action,_ = model.predict(state)
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
-            print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
+            print(f"Step: {env.unwrapped.current_step} Action: {AgentAction(action).name:<10} -> State: {state}", end=' ')
+            # print(f"State: {state}", end=' ')
+            print(f'Reward: {reward:.2f}') 
         
         rewards.append(total_reward)
 
@@ -741,5 +729,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    # train_PPO(1100000, render=False, steps_previously_trained=1400000, run=41)
-    test_PPO(10, run=41, steps_trained=2000000, render=True)
+    # train_PPO(1200000, render=False, steps_previously_trained=0, run=24)
+    test_PPO(10, run=24, steps_trained=1400064, render=True)

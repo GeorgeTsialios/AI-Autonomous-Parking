@@ -125,9 +125,143 @@ Training 21)
 
 Αλλάζω κάποιες hyperparameters, αντιγράφοντας τον Samuel Arzt. Η γραφική του πράκτορα συγκλίνει πολύ γρήγορα.
 
-
-------------------ΑΝΑΚΑΛΥΨΑ ΤΟ BUG ΜΕ ΤΑ LEFT, RIGHT-----------------------------
-
 Training 22)
 
 Βάζω πάλι τον ent_coef=0.01 για να mix things up. Η γραφική παράσταση έχει μία μικρή θετική κλίση και ο πράκτορας βελτιώνει το average reward του αργά αλλά σταθερά. Με 4 million steps εκπαίδευσης, βλέπω ότι ο πράκτορας ακολουθεί τη στρατηγική του να τρέχει γύρω γύρω την πίστα. Μετά από 7M steps (5 hours 30 min) η γραφική συγκλίνει και δεν έχει νόημα να συνεχίσουμε την εκπαίδευση.
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Αλλάζω στρατηγική, θα ξεκινήσω απ το πιο απλό πρόβλημα και αν ο πράκτορας το μάθει καλά, τότε θα αυξήσω τη δυσκολία.
+							FIXED SPOT SPAWN, FIXED CAR SPAWN
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Training 23) 
+
+Η γραφική έχει την αναμενόμενη αυξητική τάση αρχικά, αλλά συγκλίνει γρήγορα σε αρνητική τιμή (-800).
+
+Training 24)
+
+ent_coef = 0.01. Η γραφική είναι καλύτερη από πριν και συγκλίνει στην τιμή -300 (αχνή γραμμή). Παρατηρώ ότι ο πράκτορας έμαθε να εκτελεί μία συγκεκριμένη χορογραφία γύρω από τη θέση.
+
+Training 25)**
+
+ent_coef = 0.001. Η γραφική είναι ίδια με πριν. Έχει ενδιαφέρον η χορογραφία που έμαθε ο πράκτορας, η οποία είναι να κάνει κύκλους περνώντας πάνω απ τη θέση.
+
+Training 26)
+
+Προσπαθώ να ενθαρρύνω τον πράκτορα να καταλάβει ότι όταν μπει στη θέση, πρέπει να κάτσει ακίνητος. Για αυτό εφαρμόζω κι άλλο reward shaping, όταν μπαίνει στη θέση το reward που παίρνει είναι αντιστρόφως ανάλογο της ταχύτητας του. Η γραφική έχει ακριβώς την ίδια μορφή με πριν.
+
+Training 27)**
+
+Δοκιμάζω 128 νευρώνες αντί για 64. Η γραφική έχει ακριβώς την ίδια μορφή με πριν.
+
+Training 28)
+
+Άλλαξα το punishment με βάση το distance σε punishment με βάση το offset_x και το offset_y. Μετά από 2M steps, η γραφική των rewards συγκλίνει σε πολύ υψηλές τιμές (+4000). Εξετάζοντας τον πράκτορα σε 100 επεισόδια, καταφέρνει να παρκάρει σε 76 από αυτά. Αυτό οφείλεται στο ότι η μέθοδος model.predict() που χρησιμοποιείται δεν επιστρέφει ντετερμινιστικές actions, αλλά την πιθανότητα να επιλεγεί το κάθε action και με βάση αυτήν την πιθανότητα επιλέγει κάθε φορά action. Μετά από 4Μ steps, η γραφική έχει αυξηθεί κι άλλο και συγκλίνει στην τιμή 4500. Eξετάζοντας τον πράκτορα σε 100 επεισόδια, καταφέρνει να παρκάρει σε 92 από αυτά. Μετά από 4.85M steps, η γραφική έχει αυξηθεί κι άλλο και συγκλίνει στην τιμή 5000, που είναι η επιβράβευση για το παρκάρισμα. Πράγματι, εξετάζοντας τον πράκτορα σε 100 επεισόδια, καταφέρνει να παρκάρει σε 96 από αυτά. Μάλιστα, αν στην model.predict() θέσουμε το όρισμα deterministic = True, το οποίο ορίζει να επιλέγεται πάντα το action με τη μεγαλύτερη πιθανότητα, τότε έχουμε success rate 100%. 
+
+----------------------------------------------------------------------------------------------------------------------------------------
+Continuous vs Discrete Action spaces
+
+Proximal Policy Optimization (PPO) is a versatile reinforcement learning algorithm that works well with both discrete and continuous action spaces.
+In Discrete Action spaces the action selection is simpler and thus is often more stable and require less fine-tuning. It is often used in games (e.g. Atari games) where the actions are discrete such as "move left", "move right".
+Continuous Action spaces allow for more precise control, which is essential for tasks like Robotics (controlling the joint angles of a robotic arm) or Control (balancing a pole).
+In general, if your task involves a limited set of actions, using a discrete action space is often easier and more stable. However, If precise control is crucial inyour task, a continuous action space is preferrable, but it may require more careful tuning of hyperparameters.
+
+Reward Normalization
+
+It can be beneficial, but it's not strictly necessary to normalize them to a specific range eg [0,1]. Instead, what matters is that the reward signals are structured in a way that helps the learning process. Namely, large variations in reward values can make training unstable. That is because, rewards or punishments that are severely larger than the rest might dominate the network's updates.
+----------------------------------------------------------------------------------------------------------------------------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+							FIXED SPOT SPAWN, RANDOM CAR SPAWN
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Training 29)
+
+Χρησιμοποίησα την ίδια reward function και αρχιτεκτονική δικτύου με το μοντέλο που έλυσε το απλούστερο πρόβλημα. Ωστόσο μετά από 2.5M steps, βλέπω πως η γραφική συγκλίνει σε αρνητική τιμή. Εξετάζοντας τον πράκτορα, παρατηρώ ότι υιοθέτησε τη στρατηγική του να κάνει γύρω γύρω την πίστα.
+
+Training 30)
+
+Χρησιμοποιώ μεγαλύτερο ΝΝ: 3 hidden layers με 128 neurons το καθένα. Μετά από 600.000 steps και εξετάζοντας τον πράκτορα, βλέπω ότι δημιουργείται η ίδια πολιτική.
+
+Training 31)
+
+Default NN και μεγαλύτερο punishment για τα offset. Μετά από 5M steps, η γραφική συγκλίνει σε αρνητική τιμή (-1700). Εξετάζοντας τον πράκτορα, παρατηρώ ότι δεν εμφανίζει πλέον τη στρατηγική του γύρω γύρω. Αντίθετα, δείχνει συχνά μία τάση να κινηθεί προς τη θέση, το οποίο είναι ενθαρρυντικό. Μοιάζει να μην τον ενδιαφέρουν τόσο πλέον τα collisions, αλλά δεν με ανησυχεί αυτό. Ας μάθει πρώτα να παρκάρει, που είναι ο κεντρικός του στόχος, και μετά μπορεί να βελτιώσει κι άλλο την πολιτική του, προσπαθώντας να παρκάρει χωρίς να συγκρουστεί. Επίσης, δεν μοιάζει να μένει ακίνητος, το οποίο είναι ενθαρρυντικό γιατί εξερευνεί το περιβάλλον.
+
+Training 32)
+
+Μεγαλύτερο ΝΝ και άλλαξα το punishment for moving too slow. Συγκεκριμένα, όταν το αμάξι είναι μακριά από τη θέση παρκινγκ, το τιμωρώ όταν πηγαίνει με ταχύτητα <25% (της max ταχύτητας του). Όταν το αμάξι είναι κοντά στη θέση παρκινγκ (αλλά όχι μέσα της) το τιμωρώ όταν πηγαίνει με ταχύτητα <10% (της max ταχύτητας του). Δηλ. όταν πλησιάζει στη θέση, τον αφήνω να πηγαίνει πιο αργά. Αυτό είναι λογικό, για να κάνει μανούβρες ακριβείας με μικρή ταχύτητα. Μου ήρθε αυτή η ιδέα καθώς πριν τον έβλεπα να πλησιάζει στη θέση παρκινγκ αλλά να κινείται πολύ γρήγορα και να τρακάρει. Ωστόσο, μετά από 2.3Μ steps, η γραφική συγκλίνει στην ίδια τιμή με πριν. Εξετάζοντας τον πράκτορα, παρατηρώ ότι πράγματι έχει παρόμοια συμπεριφορά με πριν.
+
+Training 33)
+
+Default NN και πρόσθεσα reward for being in the right angle, όταν το αμάξι βρίσκεται κοντά στη θέση παρκινγκ (αλλά όχι μέσα της). Μετά από 2.5Μ steps, η γραφική παράσταση συγκλίνει στην ίδια τιμή με πριν. Εξετάζοντας τον πράκτορα, παρατηρώ ότι πράγματι έχει παρόμοια συμπεριφορά με πριν. Μετά από 2.5Μ steps, η γραφική παράσταση συγκλίνει στην ίδια τιμή με πριν. Εξετάζοντας τον πράκτορα, παρατηρώ ότι πράγματι έχει παρόμοια συμπεριφορά με πριν.
+
+Training 34)
+
+Άλλαξα το punishment για collision σε punishment για πολύ μικρή τιμή radar. Έτσι επιδιώκω να καταλάβει καλύτερα ο πράκτορας το γιατί τιμωρείται, ενώ αυξάνεται συνολικά το punishment που δέχεται ο πράκτορας για τέτοιες περιπτώσεις. Αυτό είναι θεμιτό, γιατί παρατήρησα πριν ότι ο πράκτορας κόλλαγε ορισμένες φορές, καθώς επιχειρούσε να μετακινηθεί προς τη θέση, αλλά είχε μπροστά του εμπόδιο. Έτσι, κατέληγε να συγκρούεται διαδοχικά με το εμπόδιο. Μετά από 2.5Μ steps, η γραφική παράσταση συγκλίνει στην ίδια τιμή με πριν. Εξετάζοντας τον πράκτορα, παρατηρώ ότι πράγματι έχει παρόμοια συμπεριφορά με πριν.
+
+Training 35)
+
+Αύξησα το reward for being inside the spot. Έτσι, επιδιώκω όταν περάσει από τη θέση, να πάρει μεγάλο reward και να μάθει να μένει εκεί. Μετά από 2.5Μ steps, η γραφική παράσταση συγκλίνει στην ίδια τιμή με πριν. Εξετάζοντας τον πράκτορα, παρατηρώ ότι πράγματι έχει παρόμοια συμπεριφορά με πριν.
+
+Training 36 <- 33)
+
+Μείωσα το learning rate σε 0.00003. Αυτό γιατί μικρές τιμές της υπερπαραμέτρου αυτής, επιβραδύνουν μεν τη σύγκλιση του αλγορίθμου, εξασφαλίζουν δε καλύτερη ακρίβεια του μοντέλου. Αντίθετα, μεγάλες τιμές αυτής της υπερπαραμέτρου προσφέρουν ταχύτερη σύγκλιση με αντίκτυπο όμως στην ακρίβεια. Άρα, εξαιτίας του μεγάλου βήματος, το μοντέλο μπορεί να μην συγκλίνει στη βέλτιστη λύση. Ωστόσο, μετά από 1Μ steps εκπαίδευσης, η γραφική έχει βελτιωθεί ελάχιστα. Εξετάζοντας τον πράκτορα, παρατηρώ ότι μάλλον το learning rate είναι τώρα πολύ μικρό, γιατί δεν βλέπω να έχει μάθει κάποια χρήσιμη συμπεριφορά. 
+
+Training 37 <- 33)
+
+Μεγαλύτερο ΝΝ. Μετά από 1Μ steps, δεν μοιάζει να υπάρχει καμία διαφορά με το training 33.
+
+Training 38 <- 33)
+
+Μικρότερο ΝΝ (2 layers of 32 neurons). Μετά από 1Μ steps, δεν μοιάζει να υπάρχει καμία διαφορά με το training 33.
+
+Training 39 <- 33)
+
+Μικρότερο ΝΝ (1 layer of 16 neurons). Μετά από ψ
+
+Training 40 <- 33)
+
+Έβαλα το inside_spot στο state space. Όταν το αμάξι βρίσκεται μέσα στη θέση, τότε παίρνει την τιμή 1, αλλίως έχει την τιμή -1. Το σκεπτικό μου ήταν να δώσω πιο εύκολα στον πράκτορα να καταλάβει πότε επιτυγχάνεται το μεγάλο reward. Ωστόσο, μετά από 4Μ steps, δεν μοιάζει να υπάρχει καμία διαφορά με τα προηγούμενα trainings.
+
+Training 41 <- 33)
+
+Έβαλα το distance στο state space (διατηρώντας τα offset_x, offset_y), στο διάστημα [1,1] λόγω της tanh. Όμως, όταν το αμάξι μπαίνει στη θέση, το distance γίνεται αυτόματα -1.  Το σκεπτικό μου ήταν να δώσω πιο εύκολα στον πράκτορα να καταλάβει πότε επιτυγχάνεται το μεγάλο reward. Ωστόσο, μετά από 2Μ steps η γραφική των rewards έχει αυξηθεί ελάχιστα. 
+
+Training 42 <- 33)
+
+Δοκιμάζω Frame skip = 4. Έτσι, επειδή θα αλλάζει action κάθε 4 frames, ελπίζω ο πράκτορας να είναι πιο σταθερός στις κινήσεις του και να μάθει να μένει μέσα στη θέση. Ωστόσο, μετά από 1.7Μ steps, δεν μοιάζει να υπάρχει καμία διαφορά με το training 33.
+
+Training 43 <- 33)
+
+Τον εκπαιδεύω να παρκάρει μόνο στο κάτω μισό του χάρτη. Η γραφική είναι σχεδόν πανομοιότυπη με την 33. Στη συνέχεια, τον εκπαιδεύω να παρκάρει σε οποιαδήποτε θέση (Training 43B). Ξανά, η γραφική συγκλίνει παράλληλα με την γραφική 33, ενώ εξετάζοντας τον πράκτορα, παρατηρώ ότι η συμπεριφορά του είναι παρόμοια με την 33. Άρα, βγάζουμε το συμπέρασμα ότι δεν υπάρχουν μεγάλες διαφορές στη δυσκολία του περιβάλλοντος μεταξύ fixed spot spawn και random spot spawn. Αυτό είναι λογικό, καθώς ο πράκτορας δέχεται το offset στα observations του, άρα δέχεται την πληροφορία της σχετικής απόστασης με τη θέση και όχι την ακριβή τοποθεσία της.
+
+Training 44 <- 33) **
+
+Fixed Car spawn, random spot spawn. 
+
+Training 45 <- 33)
+
+Απλοποιώ την reward function έχοντας ενιαία punishments ανεξάρτητα της απόστασης, ενώ προσθέτω punishment for being in the wrong angle.
+
+Training 46 <- 33)
+
+offsets - inside spot
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------
+ReLU
+
+The rectified linear activation function or ReLU for short is a piecewise linear function that will output the input directly if it is positive, otherwise, it will output zero. It has become the default activation function for many types of neural networks because a model that uses it is easier to train and often achieves better performance. https://machinelearningmastery.com/rectified-linear-activation-function-for-deep-learning-neural-networks/
+
++ ReLU tends to converge faster than tanh
++ Simplicity: ReLU is computationally simple and efficient.
++ Gradient Propagation: ReLU does not saturate for very high positive values, which helps mitigate the vanishing gradient problem that tanh has.
+- Dying ReLU Problem: Neurons can sometimes get stuck during training if they enter a region where the input is always negative, resulting in zero gradients.
+
+Tanh
+
+- A general problem with the tanh function is that it saturates. This means that large values snap to 1.0 and small values snap to -1. Further, the function is only really sensitive to changes around its mid-point of it input (0.5). Once saturated, it becomes challenging for the learning algorithm to continue to adapt the weights to improve the performance of the model. This is called the vanishing gradient problem and prevents deep (multi-layered) networks from learning effectively.
+----------------------------------------------------------------------------------------------------------------------------------------

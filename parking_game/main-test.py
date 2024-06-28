@@ -414,7 +414,7 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
         # print(f"Discrete_vel: {discrete_vel}")       
         discrete_angle = round(2 * (((self.angle) % 360) / 360) - 1, 2)
         # print(f"Discrete_angle: {discrete_angle}", end=" ") 
-        self.distance = round(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)), 2)    # the distance of the car to the center of the parking spot
+        self.distance = round(2 * (math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)) / 730.26) - 1, 2)    # the distance of the car to the center of the parking spot
         # print(f"Distance: {self.distance/ 730.26 :.2f}")
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
@@ -424,7 +424,7 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
         offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
         # print(f"Offset x: {offset_x} Offset y: {offset_y}")
         
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], self.distance, discrete_vel, discrete_angle
 
 def draw_window(player_car):
     WIN.blit(PARKING_LOT, (0, 0))
