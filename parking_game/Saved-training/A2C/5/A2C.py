@@ -208,7 +208,7 @@ class ParkingGameEnv(gym.Env):
         # Return observation and info
         return obs, info
     
-    # Gym required function (and parameters) to perform an action
+# Gym required function (and parameters) to perform an action
     def step(self, action):
 
         for event in pygame.event.get():            
@@ -243,14 +243,23 @@ class ParkingGameEnv(gym.Env):
             
         else:
             # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
-            reward -= abs(state[8]) * 3   
-            reward -= abs(state[9]) * 3
-            if abs(state[10]) < 0.25:    # punish the car for moving too slow when it has not parked
-                # print("BEING STATIONARY OUTSIDE OF PARKING SPOT", end=" ")
-                reward -= 2
+            reward -= abs(state[8]) * 6         
+            reward -= abs(state[9]) * 6
+
             if collides:
-                # print("COLLIDING", end=" ")
-                reward -= 10             # punish the car for colliding with an object
+                # print("TOO CLOSE")
+                reward -= 2             # punish the car for colliding with an object
+
+            if abs(state[8]) >= 0.2 or abs(state[9]) >= 0.2:    # when the car is far away from the parking spot
+                if abs(state[10]) < 0.25:    # punish the car for moving too slow 
+                     # print("BEING STATIONARY FAR AWAY PARKING SPOT", end=" ")
+                    reward -= 2
+            else:                     # when the car is near the parking spot
+                if abs(state[10]) < 0.1:    # punish the car for moving too slow 
+                     # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
+                    reward -= 2
+                if  abs(state[11]) < 0.05 or abs(state[11]) > 0.95:      # reward the car for being in the right angle
+                    reward += 1
 
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -651,8 +660,8 @@ def train_A2C(steps_to_train, render=False, steps_previously_trained=0, run=1):
         model_path = f"{models_dir}/a2c_model-{run}_{steps_previously_trained}_steps.zip"
         model = A2C.load(model_path, env=env, tensorboard_log=log_dir, device="cpu")  # Load the model
     else:
-        # policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[128, 128, 128])       # change the policy network architecture to a 3-layer neural network with 128 units each
-        model = A2C("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu")       # Create A2C model, MlpPolicy is a 2-layer neural network with 64 units each
+        policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[16])       # change the policy network architecture to a 3-layer neural network with 128 units each
+        model = A2C("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu", policy_kwargs=policy_kwargs)       # Create A2C model, MlpPolicy is a 2-layer neural network with 64 units each
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
     # print(model.policy) # print the model's network architecture
 
@@ -729,5 +738,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using A2C
-    # train_A2C(5000000, render=False, steps_previously_trained=2050000, run=1)
-    test_A2C(10, run=1, steps_trained=2050000, render=True)
+    # train_A2C(5000000, render=False, steps_previously_trained=0, run=5)
+    test_A2C(10, run=5, steps_trained=1750000, render=True)
