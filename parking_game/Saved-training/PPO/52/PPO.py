@@ -211,6 +211,9 @@ class ParkingGameEnv(gym.Env):
     # Gym required function (and parameters) to perform an action
     def step(self, action):
 
+        # Additional info to return. For debugging
+        info = {}
+
         for event in pygame.event.get():            
             if event.type == pygame.QUIT:       # If the user closes the window, the game stops
                 pygame.quit()
@@ -232,24 +235,25 @@ class ParkingGameEnv(gym.Env):
 
         if terminated:
             # print("TERMINATED", end=" ")
+            info["is_success"] = True
             self.successes += 1
             reward += 5000    
 
         elif inside_spot:
-            reward += 5 + 5 / (abs(state[10]) + 1)                      # reward for being inside the parking spot
+            reward += 2 + 2 / (abs(state[10]) + 1)                      # reward for being inside the parking spot
             if state[10] == 0:                   # extra reward for being stationary
                 # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
-                reward += 10
+                reward += 5
             
         else:
+            reward -= self.current_step / 100        # punish the car for taking too long to park
             # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
             reward -= abs(state[8]) * 6         
             reward -= abs(state[9]) * 6
 
-            for radar in self.car.radars:
-                if radar[1] <= -0.9:
-                    # print("TOO CLOSE")
-                    reward -= 2             # punish the car for colliding with an object
+            if collides:
+                # print("COLLIDING", end=" ")
+                reward -= 10             # punish the car for colliding with an object
 
             if abs(state[8]) >= 0.2 or abs(state[9]) >= 0.2:    # when the car is far away from the parking spot
                 if abs(state[10]) < 0.25:    # punish the car for moving too slow 
@@ -260,12 +264,10 @@ class ParkingGameEnv(gym.Env):
                      # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
                     reward -= 2
                 if  abs(state[11]) < 0.05 or abs(state[11]) > 0.95:      # reward the car for being in the right angle
-                    reward += 2
-
-        # Additional info to return. For debugging or whatever.
-        info = {}
+                    reward += 0.5 
         
         if self.current_step >= self.max_steps:
+            info["is_success"] = False
             truncated = True
             terminated = True
             info['truncated'] = True
@@ -380,16 +382,8 @@ class AbstractCar:
                 # green_sound.play()
             free_spot_color = (0, 255, 0)
             inside_spot = True                          
-            if round(self.vel, 1) == 0.0:                    # if the car is stationary in the spot
-                # print(f"Parked & stationary for {self.count} {"frame" if self.count == 1 else "frames"}", end = " ")
-                if self.count < 20:                 # if the car has been stationary for less than 20 frames, increment the counter
-                    self.count += 1
-                else:   # else if the car has been stationary for 20 frames, stop the game
-                    terminated = True
-                    self.count = 1
-                    return terminated, collides, inside_spot
-            else:
-                self.count = 1                      # if the car is not stationary, reset the counter
+            terminated = True
+            return terminated, collides, inside_spot
         else:
             free_spot_color = (255, 0, 0)
             self.count = 1
@@ -653,7 +647,7 @@ def train_PPO(steps_to_train, render=False, steps_previously_trained=0, run=1):
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
     # env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
-    env = Monitor(env)  # Wrap the environment to log episode statistics
+    env = Monitor(env, info_keywords=("is_success",))  # Wrap the environment to log episode statistics
     # env = DummyVecEnv([lambda: env])  
 
 
@@ -695,7 +689,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
         state = env.reset()[0]
 
         while not terminated and not truncated:
-            action,_ = model.predict(state, deterministic=True)
+            action,_ = model.predict(state)
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
             print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
@@ -739,5 +733,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    train_PPO(7000000, render=False, steps_previously_trained=2250000, run=35)
-    # test_PPO(10, run=35, steps_trained=2250000, render=True)
+    train_PPO(7000000, render=False, steps_previously_trained=0, run=52)
+    # test_PPO(10, run=47, steps_trained=7000000, render=True)

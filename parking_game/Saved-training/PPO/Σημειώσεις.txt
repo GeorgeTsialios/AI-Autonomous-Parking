@@ -218,7 +218,7 @@ Training 38 <- 33)
 
 Training 39 <- 33)
 
-Μικρότερο ΝΝ (1 layer of 16 neurons). Μετά από ψ
+Μικρότερο ΝΝ (1 layer of 16 neurons). Μετά από 3Μ steps, η γραφική συγκλίνει σε μικρότερη τιμή απ την 33.
 
 Training 40 <- 33)
 
@@ -234,22 +234,43 @@ Training 42 <- 33)
 
 Training 43 <- 33)
 
-Τον εκπαιδεύω να παρκάρει μόνο στο κάτω μισό του χάρτη. Η γραφική είναι σχεδόν πανομοιότυπη με την 33. Στη συνέχεια, τον εκπαιδεύω να παρκάρει σε οποιαδήποτε θέση (Training 43B). Ξανά, η γραφική συγκλίνει παράλληλα με την γραφική 33, ενώ εξετάζοντας τον πράκτορα, παρατηρώ ότι η συμπεριφορά του είναι παρόμοια με την 33. Άρα, βγάζουμε το συμπέρασμα ότι δεν υπάρχουν μεγάλες διαφορές στη δυσκολία του περιβάλλοντος μεταξύ fixed spot spawn και random spot spawn. Αυτό είναι λογικό, καθώς ο πράκτορας δέχεται το offset στα observations του, άρα δέχεται την πληροφορία της σχετικής απόστασης με τη θέση και όχι την ακριβή τοποθεσία της.
+Τον εκπαιδεύω να παρκάρει μόνο στο κάτω μισό του χάρτη. Η γραφική είναι σχεδόν πανομοιότυπη με την 33. (43Β) Τον εκπαιδεύω να παρκάρει σε οποιαδήποτε θέση. Ξανά, η γραφική συγκλίνει παράλληλα με την γραφική 33, ενώ εξετάζοντας τον πράκτορα, παρατηρώ ότι η συμπεριφορά του είναι παρόμοια με την 33. Άρα, βγάζουμε το συμπέρασμα ότι δεν υπάρχουν μεγάλες διαφορές στη δυσκολία του περιβάλλοντος μεταξύ fixed spot spawn και random spot spawn. Αυτό είναι λογικό, καθώς ο πράκτορας δέχεται το offset στα observations του, άρα δέχεται την πληροφορία της σχετικής απόστασης με τη θέση και όχι την ακριβή τοποθεσία της. (43C)** Fixed car spawn, random spot spawn. Μετά από 3M steps, η γραφική των rewards του πράκτορα συγκλίνει στην τιμή +3000. Εξετάζοντας τον πράκτορα, παρατηρώ ότι μένει ακίνητος κοντά στη θέση παρκινγκ. Ωστόσο, θέτοντας σε στοχαστικές τις actions του πράκτορα, παρατηρώ ότι σε 1000 επεισόδια αξιολόγησης καταφέρνει να παρκάρει σε 581 από αυτά. (43D) Αυξάνω το punishment for standing still.
 
-Training 44 <- 33) **
+Training 44 <- 33)
 
-Fixed Car spawn, random spot spawn. 
+Απλοποιώ την reward function έχοντας ενιαία punishments ανεξάρτητα της απόστασης, ενώ προσθέτω punishment for being in the wrong angle. Ωστόσο, μετά από 2Μ steps, δεν βλέπω διαφορά από το training 33.
 
-Training 45 <- 33)
+Training 45)
 
-Απλοποιώ την reward function έχοντας ενιαία punishments ανεξάρτητα της απόστασης, ενώ προσθέτω punishment for being in the wrong angle.
+Q learning reward function. (45A) Αρχικά, η γραφική συγκλίνει στην τιμή -300. Παρατηρώ ότι ο πράκτορας έμαθε να κάθεται ακίνητος κοντά στη θέση parking, καθώς τότε τον επιβραβεύω λίγο. (45Β) Αλλάζω τη reward function, ώστε να τιμωρώ τον πράκτορα λιγότερο όταν βρίσκεται κοντά στη θέση, αλλά να μην τον επιβραβεύω κιόλας. Μετά από 500K steps, η γραφική συγκλίνει σε αρνητική τιμή. Εξετάζοντας τον πράκτορα, βλέπω ότι δεν έχει μάθει κάποια συγκεκριμένη συμπεριφορά. (45C) Αυξάνω τον ent_coef σε 0.05, ώστε να μάθει ο πράκτορας να εξερευνάει παραπάνω. Ωστόσο, μετά από 1.4Μ steps, παρατηρώ ότι η γραφική συγκλίνει σε αρνητική τιμή. Εξετάζοντας τον πράκτορα, παρατηρώ ότι τα actions του αλλάζουν υπερβολικά συχνά, οπότε ίσως να παραήταν υψηλός ο ent_coef. (45D) Δοκιμάζω ent_coef = 0.03. Ωστόσο, η γραφική συγκλίνει γρήγορα στην ίδια τιμή με πριν.
 
 Training 46 <- 33)
 
-offsets - inside spot
+Αυξάνω τον ent_coef σε 0.03. Επιθυμώ ο πράκτορας να εξερευνήσει περισσότερο το περιβάλλον. Ωστόσο, η γραφική αρχικά ακολουθεί αυτήν της εκπαίδευσης 33 και μετά συγκλίνει σε χειρότερη τιμή. (46Β) Αυξάνω τον ent_coef σε 0.1. Ωστόσο, η γραφική αρχικά ακολουθεί αυτήν της εκπαίδευσης 33 και μετά συγκλίνει στην ίδια τιμή με πριν.
 
+Training 47 <- 33)
 
+Αλλάζω τους κανόνες του παιχνιδιού, ώστε μόλις μπαίνει ο πράκτορας στη θέση, το παιχνίδι να σταματάει. Έτσι, επιδιώκω να διευκολύνω τον πράκτορα, ώστε να μάθει αρχικά, να κερδίζει το παιχνίδι έτσι κάθε φορά. Μετά από 7Μ steps, παρατηρώ ότι η γραφική των rewards συγκλίνει σε αρνητική τιμή κοντά στο 0, ενώ το success rate του συγκλίνει στο 30%. Εξετάζοντας τον πράκτορα, δεν βλέπω διαφορά στη συμπεριφορά του σε σχέση με το Training 33. Στα 1000 επεισόδια αξιολόγησης, ο πράκτορας κατάφερε να παρκάρει σε 333 από αυτά. (47B) Ent_coef = 0, γιατί είδα ότι ο πράκτορας αλλάζει συχνά αctions. Άρα, ίσως δεν χρειάζεται να τον ωθούμε κι εμείς να επιλέγει διαφορετικά actions. Ωστόσο, μετά από 2M steps, η γραφική των rewards του πράκτορα συγκλίνει σε πολύ μικρότερη τιμή σε σχέση με πριν . Το ίδιο συμβαίνει και με τη γραφική του success rate. Εξετάζοντας τον πράκτορα, παρατηρώ ότι επιλέγει επανειλημμένα τα ίδια actions, ακόμα και με στοχαστική πολιτική. Επομένως, χρειαζόμαστε τον ent_coef, για την καλύτερη εξερεύνηση του περιβάλλοντος.
 
+Training 48 <- 33) **
+
+Παρόμοια λογική με το 43C, δοκίμασα τη reward function του 33 με fixed car spawn και random spot spawn, αλλά με 4 διαφορετικές αρχικές γωνίες για το αμάξι (0, 90, 180, 270). Μετά από 7Μ steps, η γραφική των rewards συγκλίνει σε τιμή κοντά στο 0, αλλά εξετάζοντας τον πράκτορα βλέπω πως σπάνια καταφέρνει να παρκάρει στη θέση, συνήθως κινείται δίπλα της. Στα 1000 επεισόδια αξιολόγησης, ο πράκτορας κατάφερε να παρκάρει σε 0 από αυτά.
+
+Training 49 <-43C) **
+
+Δοκιμάζω Curriculum Learning με το μοντέλο 43C, που έμαθε να παρκάρει (581/1000) με σταθερό spawn. (49Α) Αρχικά, θα τον βάλω να μάθει να παρκάρει απ το ίδιο spawn, αλλά υπό διαφορετικές γωνίες στο διάστημα [-10,10]. Μετά από 4Μ steps, το success rate συγκλίνει στο 50%. Στα 1000 επεισόδια αξιολόγησης, ο πράκτορας κατάφερε να παρκάρει σε 546 από αυτά. (49B) Έπειτα, αυξάνω το δυνατό διάστημα της γωνίας υπό την οποία κάνει spawn ο πράκτορας. Μετά από 4M steps, το success rate συγκλίνει στο 35%. Στα 1000 επεισόδια αξιολόγησης, ο πράκτορας κατάφερε να παρκάρει σε 403 από αυτά.
+
+Training 50 <- 47)
+
+Δοκιμάζω να τελειώνει το επεισόδιο μόνο όταν παρκάρει ο πράκτορας. Όπως είναι λογικό, αρχικά παρατηρώ ότι το episode length είναι πάρα πολύ μεγάλο και το average reward πάρα πολύ μικρό. Όμως το θετικό είναι ότι αυτές οι καμπύλες μεταβάλλονται με απότομη θετική κλίση. Ωστόσο, οι καμπύλες συγκλίνουν όταν φτάνουν σε συγκρίσιμες τιμές με αυτές του Training 47. Συγκεκριμένα, το episode length συγκλίνει στην τιμή 2500 (τόσα steps χρειάζονται κατά ΜΟ για να παρκάρει ο πράκτορας) και το average reward συγκλίνει στην τιμή -8000, καθώς σε αυτό το διάστημα το αυτοκίνητο συγκρούεται με αντικείμενα και απομακρύνεται σημαντικά απ τη θέση παρκινγκ.
+
+Training 51 <- 47)
+
+Αλλάζω το punishment on distance σε reward on distance. Αυτό γιατί διάβασα πως: continuous negative reinforcement might make it harder for the agent to explore since it constantly receives penalties. Ωστόσο, μετά από 4Μ steps, η γραφική του success rate του πράκτορα είναι σημαντικά μικρότερη αυτής του Training 47.
+
+Training 52 <- 47)
+
+Πρόσθεσα αυξανόμενο punishment με βάση τα steps του πράκτορα. Έτσι, προσπαθώ να τον ωθήσω να τελειώσει το επεισόδιο το νωρίτερα. Ωστόσο, μετά από 2Μ steps, οι γραφικές έχουν την ίδια μορφή με το Training 47, ενώ το success rate είναι μικρότερο. 
 
 ----------------------------------------------------------------------------------------------------------------------------------------
 ReLU
@@ -264,4 +285,37 @@ The rectified linear activation function or ReLU for short is a piecewise linear
 Tanh
 
 - A general problem with the tanh function is that it saturates. This means that large values snap to 1.0 and small values snap to -1. Further, the function is only really sensitive to changes around its mid-point of it input (0.5). Once saturated, it becomes challenging for the learning algorithm to continue to adapt the weights to improve the performance of the model. This is called the vanishing gradient problem and prevents deep (multi-layered) networks from learning effectively.
+----------------------------------------------------------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------------------------------------------------------------
+DROPOUT	
+
+Dropout is a regularization technique commonly used in deep learning for tasks like image classification, natural language processing, and other supervised learning tasks. The main purpose of dropout is to prevent overfitting by randomly setting a fraction of input units to zero during training. This helps in improving the generalization of the model by reducing the interdependence between neurons.
+
+In the context of deep reinforcement learning (RL), such as in algorithms like Deep Q Networks (DQN), Deep Deterministic Policy Gradient (DDPG), and others, dropout is generally not used for several reasons:
+
+Instability: Dropout introduces randomness during training by setting some neurons to zero, which can be problematic in the context of RL algorithms. RL algorithms are sensitive to the stability of the learning process, and the randomness introduced by dropout can interfere with the learning dynamics and make it harder for the agent to learn an optimal policy.
+Non-i.i.d. Data: In supervised learning tasks, dropout is effective because the training data is usually assumed to be independent and identically distributed (i.i.d.). However, in RL, the data generated during training is not i.i.d. The agent's interactions with the environment are sequential and correlated, making it challenging to apply dropout effectively.
+Exploration vs. Exploitation: RL algorithms need to balance exploration (trying out new actions to discover the environment) and exploitation (leveraging known information to maximize rewards). Dropout can interfere with this balance by introducing unnecessary noise during both exploration and exploitation phases.
+Overfitting vs. Underfitting: In supervised learning, the goal is often to prevent overfitting by using dropout. In RL, the main challenge is the trade-off between underfitting (not learning the optimal policy) and overfitting. Dropout may hinder the agent's ability to learn a good policy by preventing it from fully exploiting the information available in the data.
+Instead of dropout, techniques like target network updates, experience replay, reward clipping, and exploration strategies (such as epsilon-greedy, softmax action selection, etc.) are commonly used in deep RL algorithms to stabilize training and improve performance.
+----------------------------------------------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------------------------------------------
+
+Objectives in Reinforcement Learning
+
+1. Generalization: Ensure the agent performs well not only on the specific scenarios seen during training but also on unseen scenarios. This is similar to avoiding overfitting in supervised learning.
+2. Sample Efficiency: Train the agent to learn the optimal policy using a reasonable amount of data or interactions with the environment.
+3. Stability and Convergence: Ensure the training process is stable and the agent’s policy converges to an optimal or near-optimal solution.
+----------------------------------------------------------------------------------------------------------------------------------------
+
+Stochastic policy 
+
+A policy is a function that maps the input state to an action. A stochastic policy does not
+choose action deterministically. It can be used to encourage exploration during training by allowing the agents
+to occasionally execute low-confidence actions. Stochastic policy is always assumed in the formulation of policy
+gradient based training algorithms.
+
 ----------------------------------------------------------------------------------------------------------------------------------------

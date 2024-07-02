@@ -227,40 +227,37 @@ class ParkingGameEnv(gym.Env):
         state = list(self.car.discretize_state())
         obs = np.array(state).astype(np.float16)
     
-        # Calculate reward 
+        # Determine reward
         reward = 0
 
+        reward += self.car.difference * 0.3        # reward/ punishment for getting closer/ further from the center of the parking spot
+
         if terminated:
-            # print("TERMINATED", end=" ")
-            self.successes += 1
-            reward += 5000    
+            reward += 200  
 
-        elif inside_spot:
-            reward += 5 + 5 / (abs(state[10]) + 1)                      # reward for being inside the parking spot
-            if state[10] == 0:                   # extra reward for being stationary
-                # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
-                reward += 10
-            
+        elif inside_spot:         # reward the car for being in the center of the parking spot
+                reward += 0.1
+                if abs(state[11]) < 0.05 or abs(state[11]) > 0.95:                       # reward the car for having the right angle
+                    reward += 1
+                    if state[10] == 0:                   # reward the car for being stationary in the center of the parking spot
+                        reward += 1  
         else:
-            # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
-            reward -= abs(state[8]) * 6         
-            reward -= abs(state[9]) * 6
-
-            for radar in self.car.radars:
-                if radar[1] <= -0.9:
-                    # print("TOO CLOSE")
-                    reward -= 2             # punish the car for colliding with an object
-
-            if abs(state[8]) >= 0.2 or abs(state[9]) >= 0.2:    # when the car is far away from the parking spot
-                if abs(state[10]) < 0.25:    # punish the car for moving too slow 
-                     # print("BEING STATIONARY FAR AWAY PARKING SPOT", end=" ")
-                    reward -= 2
-            else:                     # when the car is near the parking spot
-                if abs(state[10]) < 0.1:    # punish the car for moving too slow 
-                     # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
-                    reward -= 2
-                if  abs(state[11]) < 0.05 or abs(state[11]) > 0.95:      # reward the car for being in the right angle
-                    reward += 2
+            if abs(state[8]) <= 0.2 or abs(state[9]) <= 0.2:        # when the car is near the parking spot
+                reward -= 0.05               # passive punishment for not parking
+                if abs(state[10]) < 0.1:    # punish the car for standing still when it has not parked
+                    reward -= 0.2
+                for radar in self.car.radars:
+                    if radar[1] <= -0.9:
+                        reward -= 0.3          # punish the car for being too close to an object
+            else:               # when the car is far from the parking spot
+                reward -= 0.1        # passive punishment for not parking
+                if abs(state[10]) < 0.1:    # punish the car for standing still when it has not parked
+                    reward -= 0.4
+                for radar in self.car.radars:
+                    if radar[1] <= -0.9:
+                        reward -= 0.5          # punish the car for being too close to an object
+            if collides:
+                reward -= 5              # punish the car for colliding with an object
 
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -546,7 +543,7 @@ class AbstractCar:
             self.radars[i] = [(x, y), distance]
 
     def discretize_state(self):
-        # previous_distance = self.distance 
+        previous_distance = self.distance 
         for radar in self.radars:
             radar[1] = round(2 * (radar[1] / 205) - 1, 2)
         # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
@@ -557,7 +554,7 @@ class AbstractCar:
         self.distance = round(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)), 2)    # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
-        # self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+        self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
         # print(f"Difference: {self.difference}", end=" ")
         offset_x = round((self.center[0] - free_spot_rect.centerx) / 551.65, 2)     # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
         offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
@@ -662,7 +659,7 @@ def train_PPO(steps_to_train, render=False, steps_previously_trained=0, run=1):
         model = PPO.load(model_path, env=env, tensorboard_log=log_dir, device="cpu")  # Load the model
     else:
         # policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[128, 128, 128])       # change the policy network architecture to a 3-layer neural network with 128 units each
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu", ent_coef=0.01)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
+        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu", ent_coef=0.03)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
     # print(model.policy) # print the model's network architecture
 
@@ -739,5 +736,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    train_PPO(7000000, render=False, steps_previously_trained=2250000, run=35)
-    # test_PPO(10, run=35, steps_trained=2250000, render=True)
+    train_PPO(7000000, render=False, steps_previously_trained=0, run=45)
+    # test_PPO(10, run=45, steps_trained=1300000, render=True)

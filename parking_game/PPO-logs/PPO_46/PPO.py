@@ -236,20 +236,19 @@ class ParkingGameEnv(gym.Env):
             reward += 5000    
 
         elif inside_spot:
-            reward += 5 + 5 / (abs(state[10]) + 1)                      # reward for being inside the parking spot
+            reward += 2 + 2 / (abs(state[10]) + 1)                      # reward for being inside the parking spot
             if state[10] == 0:                   # extra reward for being stationary
                 # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
-                reward += 10
+                reward += 5
             
         else:
             # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
             reward -= abs(state[8]) * 6         
             reward -= abs(state[9]) * 6
 
-            for radar in self.car.radars:
-                if radar[1] <= -0.9:
-                    # print("TOO CLOSE")
-                    reward -= 2             # punish the car for colliding with an object
+            if collides:
+                # print("COLLIDING", end=" ")
+                reward -= 10             # punish the car for colliding with an object
 
             if abs(state[8]) >= 0.2 or abs(state[9]) >= 0.2:    # when the car is far away from the parking spot
                 if abs(state[10]) < 0.25:    # punish the car for moving too slow 
@@ -260,7 +259,7 @@ class ParkingGameEnv(gym.Env):
                      # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
                     reward -= 2
                 if  abs(state[11]) < 0.05 or abs(state[11]) > 0.95:      # reward the car for being in the right angle
-                    reward += 2
+                    reward += 2 
 
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -698,7 +697,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
             action,_ = model.predict(state, deterministic=True)
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
-            print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
+            # print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
         
         rewards.append(total_reward)
 
@@ -739,5 +738,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    train_PPO(7000000, render=False, steps_previously_trained=2250000, run=35)
-    # test_PPO(10, run=35, steps_trained=2250000, render=True)
+    # train_PPO(7000000, render=False, steps_previously_trained=2700000, run=33)
+    test_PPO(10, run=33, steps_trained=2700000, render=True)
