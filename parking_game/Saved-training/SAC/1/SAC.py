@@ -748,5 +748,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using SAC
-    # train_SAC(7000000, render=False, steps_previously_trained=0, run=1)
-    test_SAC(1000, run=1, steps_trained=100000, render=True)
+    train_SAC(7000000, render=False, steps_previously_trained=200000, run=1)
+    # test_SAC(1000, run=1, steps_trained=100000, render=True)
