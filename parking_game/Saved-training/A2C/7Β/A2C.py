@@ -263,7 +263,7 @@ class ParkingGameEnv(gym.Env):
                      # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
                     reward -= 2
                 if  abs(state[11]) < 0.05 or abs(state[11]) > 0.95:      # reward the car for being in the right angle
-                    reward += 0.5 
+                    reward += 1.5 
         
         if self.current_step >= self.max_steps:
             info["is_success"] = False
@@ -732,5 +732,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using A2C
-    # train_A2C(7000000, render=False, steps_previously_trained=7000000, run=7)
-    test_A2C(1000, run=7, steps_trained=10500000, render=True)
+    # train_A2C(7000000, render=False, steps_previously_trained=3000000, run='7B')
+    test_A2C(1000, run='7B', steps_trained=2800000, render=True)
