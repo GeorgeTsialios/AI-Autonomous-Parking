@@ -179,7 +179,7 @@ class ParkingGameEnv(gym.Env):
                         9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                         10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-        free_spot_index = 8 if car_spawn_index == 1 else 3 # random.randint(6, 10) if car_spawn_index == 1 else random.randint(1, 5)     # the free spot will be on the same side of the player car
+        free_spot_index = 8 if car_spawn_index == 1 else 3 # random.randint(6, 10) if car_spawn_index == 1 else random.randint(1, 5)   #   # the free spot will be on the same side of the player car
         # print(f"Free spot: {free_spot_index}")
         parking_spots.pop(free_spot_index)
 
@@ -264,11 +264,11 @@ class ParkingGameEnv(gym.Env):
             if abs(state[8] - 0.5) >= 0.1 or abs(state[9] - 0.5) >= 0.1:    # when the car is far away from the parking spot
                 if state[10] > 0.25 and state[10] < 0.55:    # punish the car for moving too slow 
                      # print("BEING STATIONARY FAR AWAY PARKING SPOT", end=" ")
-                    reward -= 2
+                    reward -= 10
             else:                     # when the car is near the parking spot
                 if state[10] > 0.35 and state[10] < 0.45:    # punish the car for moving too slow 
                      # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
-                    reward -= 2
+                    reward -= 10
                 if  (state[11] > 0.98 or state[11] < 0.02) or (state[11] > 0.48 and state[11] < 0.52):      # reward the car for being in the right angle
                     reward += 0.5
         
@@ -677,7 +677,7 @@ def train_SAC(steps_to_train, render=False, steps_previously_trained=0, run=1):
 
     checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'sac_model-{run}')
 
-    model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="SAC", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
+    model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="SAC", reset_num_timesteps=False)  # Train the model
     model.save(f"{models_dir}/sac_model-{run}_{steps_to_train}_steps.zip")  # Save the model
  
     print(f"Success / episodes: {env.unwrapped.successes} / {steps_to_train / max_steps :.0f}")
@@ -748,5 +748,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using SAC
-    train_SAC(7000000, render=False, steps_previously_trained=200000, run=1)
-    # test_SAC(1000, run=1, steps_trained=100000, render=True)
+    train_SAC(7000000, render=False, steps_previously_trained=7000000, run=1)
+    # test_SAC(1000, run=1, steps_trained=6850000, render=True)
