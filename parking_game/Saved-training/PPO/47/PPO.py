@@ -691,7 +691,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
             action,_ = model.predict(state)
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
-            # print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
+            print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
         
         rewards.append(total_reward)
 
@@ -733,4 +733,4 @@ if __name__ == '__main__':
             
     # Train/test using PPO
     # train_PPO(7000000, render=False, steps_previously_trained=0, run=47)
-    test_PPO(1000, run=47, steps_trained=5100000, render=False)
+    test_PPO(1000, run=47, steps_trained=7000000, render=True)

@@ -733,5 +733,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    train_PPO(2000, render=False, episodes_previously_trained=0, run=9)
-    # test_PPO(10, 7, 600000, render=True)
+    # train_PPO(2000, render=False, episodes_previously_trained=0, run=9)
+    test_PPO(10, 9, 3900000, render=True)

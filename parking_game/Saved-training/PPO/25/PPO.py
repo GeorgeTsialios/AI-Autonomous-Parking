@@ -683,7 +683,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
         state = env.reset()[0]
 
         while not terminated and not truncated:
-            action,_ = model.predict(state)
+            action,_ = model.predict(state, deterministic=False)
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
             print(f"Step: {env.unwrapped.current_step} Action: {AgentAction(action).name:<10} -> State: {state}", end=' ')

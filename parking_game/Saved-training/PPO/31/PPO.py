@@ -682,7 +682,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
         terminated = False
         truncated = False
         total_reward = 0
-        state = env.reset()[0]
+        state = env.reset(seed=episode)[0]
 
         while not terminated and not truncated:
             action,_ = model.predict(state, deterministic=True)
