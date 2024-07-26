@@ -6,7 +6,7 @@
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
 # in the middle part of the parking lot). The car will have 8 depth sensors (radars), which will detect the distance to the nearest object (or window borders) in 8 directions.
 # The radars will be drawn on the screen as lines.
-# The player car will be controlled by an AI agent, which will use PPO to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
+# The player car will be controlled by an AI agent, which will use Q-learning to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
 # The agent's states will consist of the 8 depth sensors, the offset between the center of the car and the center of the parking spot in the x axis, the offset between the center of the car and the center of the parking spot in the y axis, the velocity of the car, the angle of the car. However, these features will be discretized into a smaller number of bins. This way we can reduce the state space size. 
 
 
@@ -26,10 +26,6 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 import torch as th
-from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.env_util import make_vec_env
-from rllte.xplore.reward import E3B
 
 
 # Register this module as a gym environment. Once registered, the id is usable in gym.make().
@@ -125,59 +121,6 @@ class SkipEnv(gym.Wrapper[np.ndarray, int, np.ndarray, int]):
 
         return obs, total_reward, terminated, False, info
 
-class RLeXploreWithOnPolicyRL(BaseCallback):
-    """
-    A custom callback for combining RLeXplore and on-policy algorithms from SB3.
-    """
-    def __init__(self, irs, verbose=0):
-        super(RLeXploreWithOnPolicyRL, self).__init__(verbose)
-        self.irs = irs
-        self.buffer = None
-
-    def init_callback(self, model: BaseAlgorithm) -> None:
-        super().init_callback(model)
-        self.buffer = self.model.rollout_buffer
-
-    def _on_step(self) -> bool:
-        """
-        This method will be called by the model after each call to `env.step()`.
-
-        :return: (bool) If the callback returns False, training is aborted early.
-        """
-        observations = self.locals["obs_tensor"]
-        device = observations.device
-        actions = th.as_tensor(self.locals["actions"], device=device)
-        rewards = th.as_tensor(self.locals["rewards"], device=device)
-        dones = th.as_tensor(self.locals["dones"], device=device)
-        next_observations = th.as_tensor(self.locals["new_obs"], device=device)
-
-        # ===================== watch the interaction ===================== #
-        self.irs.watch(observations, actions, rewards, dones, dones, next_observations)
-        # ===================== watch the interaction ===================== #
-        return True
-
-    def _on_rollout_end(self) -> None:
-        # ===================== compute the intrinsic rewards ===================== #
-        # prepare the data samples
-        obs = th.as_tensor(self.buffer.observations)
-        # get the new observations
-        new_obs = obs.clone()
-        new_obs[:-1] = obs[1:]
-        new_obs[-1] = th.as_tensor(self.locals["new_obs"])
-        actions = th.as_tensor(self.buffer.actions)
-        rewards = th.as_tensor(self.buffer.rewards)
-        dones = th.as_tensor(self.buffer.episode_starts)
-        print(obs.shape, actions.shape, rewards.shape, dones.shape, obs.shape)
-        # compute the intrinsic rewards
-        intrinsic_rewards = irs.compute(
-            samples=dict(observations=obs, actions=actions, 
-                         rewards=rewards, terminateds=dones, 
-                         truncateds=dones, next_observations=new_obs),
-            sync=True)
-        # add the intrinsic rewards to the buffer
-        self.buffer.advantages += intrinsic_rewards.cpu().numpy()
-        self.buffer.returns += intrinsic_rewards.cpu().numpy()
-        # ===================== compute the intrinsic rewards ===================== #
 
 class ParkingGameEnv(gym.Env):
     # metadata is a required attribute
@@ -231,7 +174,7 @@ class ParkingGameEnv(gym.Env):
                         9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                         10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-        free_spot_index = 8 if car_spawn_index == 1 else 3 # random.randint(6, 10) if car_spawn_index == 1 else random.randint(1, 5)     # the free spot will be on the same side of the player car
+        free_spot_index = random.randint(6, 10) if car_spawn_index == 1 else random.randint(1, 5) # random.randint(6, 10) if car_spawn_index == 1 else random.randint(1, 5)     # the free spot will be on the same side of the player car
         # print(f"Free spot: {free_spot_index}")
         parking_spots.pop(free_spot_index)
 
@@ -307,6 +250,9 @@ class ParkingGameEnv(gym.Env):
             reward -= abs(state[8]) * 6         
             reward -= abs(state[9]) * 6
 
+            if state[10] > 0.1:
+                reward += 1
+
             if collides:
                 # print("COLLIDING", end=" ")
                 reward -= 10             # punish the car for colliding with an object
@@ -314,13 +260,17 @@ class ParkingGameEnv(gym.Env):
             if abs(state[8]) >= 0.2 or abs(state[9]) >= 0.2:    # when the car is far away from the parking spot
                 if abs(state[10]) < 0.25:    # punish the car for moving too slow 
                      # print("BEING STATIONARY FAR AWAY PARKING SPOT", end=" ")
-                    reward -= 2
+                    reward -= 5
+                    if state[10] == 0:
+                        reward -= 5
             else:                     # when the car is near the parking spot
                 if abs(state[10]) < 0.1:    # punish the car for moving too slow 
                      # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
-                    reward -= 2
+                    reward -= 3
+                    if state[10] == 0:
+                        reward -= 5
                 if  abs(state[11]) < 0.05 or abs(state[11]) > 0.95:      # reward the car for being in the right angle
-                    reward += 2 
+                    reward += 0.5
         
         if self.current_step >= self.max_steps:
             info["is_success"] = False
@@ -698,15 +648,10 @@ if not os.path.exists(models_dir):
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
-env = gym.make('parking-game-v0', render_mode=None)
-
-# ===================== build the reward ===================== #
-irs = E3B(env, device='cpu')
-
 # Train using PPO algorithm (either from scratch or continue training)
 def train_PPO(steps_to_train, render=False, steps_previously_trained=0, run=1):
 
-    global env
+    env = gym.make('parking-game-v0', render_mode='human' if render else None)
     # env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
     env = Monitor(env, info_keywords=("is_success",))  # Wrap the environment to log episode statistics
     # env = DummyVecEnv([lambda: env])  
@@ -723,7 +668,7 @@ def train_PPO(steps_to_train, render=False, steps_previously_trained=0, run=1):
 
     checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'ppo_model-{run}')
 
-    model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, callback=RLeXploreWithOnPolicyRL(irs), tb_log_name="PPO", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
+    model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="PPO", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
     model.save(f"{models_dir}/ppo_model-{run}_{steps_to_train}_steps.zip")  # Save the model
  
     print(f"Success / episodes: {env.unwrapped.successes} / {steps_to_train / max_steps :.0f}")
@@ -794,5 +739,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    # train_PPO(7000000, render=False, steps_previously_trained=0, run=47)
-    test_PPO(1000, run=47, steps_trained=7000000, render=True)
+    # train_PPO(7000000, render=False, steps_previously_trained=0, run=56)
+    test_PPO(1000, run=56, steps_trained=1000000, render=True)
