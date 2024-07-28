@@ -6,22 +6,26 @@
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
 # in the middle part of the parking lot). The car will have 8 depth sensors (radars), which will detect the distance to the nearest object (or window borders) in 8 directions.
 # The radars will be drawn on the screen as lines.
+# The player car will be controlled by an AI agent, which will use Q-learning to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
+# The agent's states will consist of the 8 depth sensors, the velocity of the car, the angle of the car and the distance between the center of the car and the center of the parking spot. However, these features will be discretized into a smaller number of bins. This way we can reduce the state space size. 
+# The agent will have a Q-table, which will be updated after each action. The agent will have a reward system, which will give a reward of 1 if the car is parked in the parking spot, and -1 if the car collides with an object or goes out of the window. The agent will have a discount factor of 0.9 and a learning rate of 0.1. The agent will have an epsilon value of 0.1, which will be used for epsilon-greedy exploration. The agent will have a maximum of 1000 episodes to learn how to park the car.
+
 
 import pygame
 import time
 import math
 import random
+import numpy as np
+import ast
+import bisect
+
 
 # random.seed(4)
-
-pygame.font.init()      # Initialize the font module, essential for rendering text on the screen
-SMALL_FONT = pygame.font.SysFont("gadugi", 16, False, False)    # Select text font, size, bold, italic.
-LARGE_FONT = pygame.font.SysFont("gadugi", 22, False, False)     
 
 pygame.mixer.init()
 
 music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
 pygame.mixer.music.set_volume(0.05)
 collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
 start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
@@ -35,12 +39,12 @@ def scale_image(img, factor):
     return pygame.transform.scale(img, size)  
 
 
-PARKING_LOT = pygame.image.load("parking_game/imgs/stats/parking-lot-stats.png")
+PARKING_LOT = pygame.image.load("parking_game/imgs/parking-lot-easy.png")
 GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
 GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
 
 
-BLUE_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-darkblue-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-darkblue-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
+RED_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-red-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-red-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
 YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/car-yellow-wheels.png"), 40/162)       # this way all cars have the same width (40px) 
 PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink-wheels.png"), 40/162)
 # GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green.png"), 40/163)
@@ -66,6 +70,7 @@ free_spot_color = (255, 0, 0, 255)
 parking_spots = {}
 intersection = None
 free_spot_rect = None
+free_spot_index = None
 FREE_SPOT_BORDER_MASK = None
 PARKING_LOT_BORDER_MASK = None
 
@@ -75,6 +80,7 @@ def initialize_game():
     random.shuffle(cars)
     global parking_spots
     global free_spot_rect
+    global free_spot_index
     global FREE_SPOT_BORDER_MASK
     global PARKING_LOT_BORDER_MASK
 
@@ -89,14 +95,14 @@ def initialize_game():
                     9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                     10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-    free_spot_index = random.randint(1, 10)
+    free_spot_index = random.choice([3,8])
     print(f"Free spot: {free_spot_index}")
     parking_spots.pop(free_spot_index)
 
-    SPOT_RECTANGLES = [pygame.Rect(140.83, 201.5, 75, 100), pygame.Rect(239.16, 201.5, 75, 100), pygame.Rect(337.49, 201.5, 75, 100), pygame.Rect(435.82, 201.5, 75, 100), pygame.Rect(534.15, 201.5, 75, 100), pygame.Rect(140.83, 448.5, 75, 100), pygame.Rect(239.16, 448.5, 75, 100), pygame.Rect(337.49, 448.5, 75, 100), pygame.Rect(435.82, 448.5, 75, 100), pygame.Rect(534.15, 448.5, 75, 100)]
+    SPOT_RECTANGLES = [pygame.Rect(140.83, 201.5, 75, 100), pygame.Rect(239.16, 201.5, 75, 100), pygame.Rect(315, 186, 120, 120), pygame.Rect(435.82, 201.5, 75, 100), pygame.Rect(534.15, 201.5, 75, 100), pygame.Rect(140.83, 448.5, 75, 100), pygame.Rect(239.16, 448.5, 75, 100), pygame.Rect(315, 444.5, 120, 120), pygame.Rect(435.82, 448.5, 75, 100), pygame.Rect(534.15, 448.5, 75, 100)]
 
     free_spot_rect = SPOT_RECTANGLES[free_spot_index - 1]     # the rectangle that will turn green when the player parks the car inside it
-    FREE_SPOT_BORDER = pygame.image.load(f"parking_game/imgs/free-spot-border-{free_spot_index}.png")       
+    FREE_SPOT_BORDER = pygame.image.load(f"parking_game/imgs/free-spot-border-{free_spot_index}-easy.png")       
     FREE_SPOT_BORDER_MASK = pygame.mask.from_surface(FREE_SPOT_BORDER)              
 
     PARKING_LOT_BORDER = pygame.image.load(f"parking_game/imgs/parking-lot-border-{free_spot_index}.png")
@@ -113,11 +119,11 @@ class AbstractCar:
         self.acceleration = 0.1
         self.last_x, self.last_y = self.x, self.y
         self.rotate_center()
-        self.action = ""
+        self.distance = 0
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
-        car_spawn_index = random.randint(0, 3)
+        car_spawn_index = 1 if free_spot_index > 5 else 0 #random.randint(0, 3)                       # ALWAYS SPAWN IN THE DOWN RECTANGLE
         car_spawn = SPAWN_RECTS[car_spawn_index]
         car_spawn.x += random.randint(0, car_spawn.width)               # randomize the spawn position of the player car
         car_spawn.y += random.randint(0, car_spawn.height)
@@ -135,7 +141,7 @@ class AbstractCar:
         # pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
         # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
-        # pygame.draw.circle(WIN, (0, 255, 0), self.center, 5)       # draw the center of the car with green color
+        # pygame.draw.circle(WIN, (0, 255, 0), self.center, 3)       # draw the center of the car with green color
         for radar in self.radars:
                 position = radar[0]
                 pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
@@ -157,6 +163,7 @@ class AbstractCar:
         global new_img
         global intersection
         new_img = self.rotate_center()
+        parked = False
 
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
@@ -164,7 +171,7 @@ class AbstractCar:
             collision_sound.play()
             self.bounce()
         
-        elif new_img[1].x < 0 or new_img[1].x > 750 or new_img[1].y < 0 or new_img[1].y > 750:       # if the car goes out of the window, return_to_map it
+        elif new_img[1].x < 0 or new_img[1].x > WIN_WIDTH or new_img[1].y < 0 or new_img[1].y > WIN_HEIGHT:       # if the car goes out of the window, return_to_map it
             print(f"out of bounds - x: {new_img[1].x}, y: {new_img[1].y}")
             intersection =  None
             self.return_to_map()
@@ -174,23 +181,24 @@ class AbstractCar:
              intersection = None
 
         global free_spot_color
-        # global start_time
-
-        if free_spot_color == (0, 255, 0):
-                self.reset()                # instant parking
+        global start_time
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            green_sound.play()
+            parked = True
+            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
+                green_sound.play()
             free_spot_color = (0, 255, 0)
-            # if self.vel == 0:                          # if the car is stationary in the spot
-            #     if start_time is None:                 # if it just parked, start the timer
-            #         start_time = time.time()
-            #     elif  time.time() - start_time >= 2:   # else if the car has been stationary for 2 seconds, stop the game
-            #         self.reset()
-            # else:
-            #     start_time = None                      # if the car is not stationary, return_to_map the timer
+            if self.vel == 0:                          # if the car is stationary in the spot
+                if start_time is None:                 # if it just parked, start the timer
+                    start_time = time.time()
+                elif  time.time() - start_time >= 2:   # else if the car has been stationary for 2 seconds, stop the game
+                    self.reset()
+                    return parked
+            else:
+                start_time = None                      # if the car is not stationary, return_to_map the timer
         else:
             free_spot_color = (255, 0, 0)
+        return parked
     
     def collide_map(self, new_rect, new_mask):
         global intersection
@@ -300,13 +308,11 @@ class AbstractCar:
         self.last_x, self.last_y = self.x, self.y
 
     def reset(self):
-        global t_start
-        t_start = time.time()
         self.return_to_map()
         initialize_game()
         self.check_radars(PARKING_LOT_BORDER_MASK)
 
-    def check_radars(self, game_map):
+    def check_radars(self, game_map):             # 8 RADARS
         self.radars = [0, 0, 0, 0, 0, 0, 0, 0]
         degrees = [45, 75, 105, 135, 225, 255, 285, 315]
         # degrees = [0, 45, 90, 135, 180, 225, 270, 315]
@@ -343,35 +349,82 @@ class AbstractCar:
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
-    IMG = BLUE_CAR[0]
+    IMG = RED_CAR[0]
 
     def move_player(self):
-        self.action = ""
         keys = pygame.key.get_pressed()
         throttling = False   
-        self.img = BLUE_CAR[0]           # the car image is set to the default image, so that it does not rotate when the player is not pressing the left or right arrow key     
-        if not (keys[pygame.K_LEFT] and keys[pygame.K_RIGHT]): 
-            if keys[pygame.K_LEFT]:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
-                    self.rotate(left=True)          # Due to this limitation of keyboard, we can only detect two arrow key presses at a time. This means that if the player is pressing the left and the right arrow key
-                    self.img = pygame.transform.flip(BLUE_CAR[1], True, False)     # and then presses the up arrow key, the car will not move, as this third key press will not be detected.                                
-                    self.action = "LEFT"
-            elif keys[pygame.K_RIGHT]:                
-                    self.rotate(right=True)
-                    self.img = BLUE_CAR[1]                                # we change the car img to the one that the wheels are turning
-                    self.action = "RIGHT"
-        if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):              # if both keys are pressed, the car should not move
+        self.img = RED_CAR[0]           # the car image is set to the default image, so that it does not rotate when the player is not pressing the left or right arrow key     
+        if keys[pygame.K_LEFT]:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
+                self.rotate(left=True)          # Due to this limitation of keyboard, we can only detect two arrow key presses at a time. This means that if the player is pressing the left and the right arrow key
+                self.img = pygame.transform.flip(RED_CAR[1], True, False)     # and then presses the up arrow key, the car will not move, as this third key press will not be detected.                                
+        if keys[pygame.K_RIGHT]:                
+                self.rotate(right=True)
+                self.img = RED_CAR[1]                                # we change the car img to the one that the wheels are turning
+        if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):          # if both keys are pressed, the car should not move
             if keys[pygame.K_UP]:
                 throttling = True
                 self.move_forward()
-                self.action += " UP"
-            elif keys[pygame.K_DOWN]:
+            if keys[pygame.K_DOWN]:
                 throttling = True
                 self.move_backward()
-                self.action += " DOWN"
 
         if not throttling and self.vel !=0:                # if the player is not stepping on the gas, reduce the speed 
             self.reduce_speed()
 
+    # def discretize_state(self):       OG
+    #     for radar in self.radars:              
+    #         radar[1] = radar[1] // 40        # The discretized radar has 6 bins, in range [0, 5]
+    #         # print(f"Discretized radar {self.radars.index(radar)}: {radar[1]}") 
+    #     velocity = math.ceil(self.vel / 4) if  self.vel > 0 else math.floor(self.vel / 4)        # The discretized velocity has 4 bins, in range [-1, 2]
+    #     # print(f"Self.vel: {self.vel}    velocity: {velocity}")       
+    #     angle = math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2)     # The discretized angle has 11 bins, in range [-5, 5]
+    #     print(f"Self.angle: {self.angle}    angle: {angle}") 
+    #     distance = int(math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)))         
+    #     distance_discrete = distance // 100 + 9 if distance >= 100 else distance // 10          # The discretized distance has 17 bins, in range [0, 16]
+    #     # print(f"Distance: {distance}    Distance discrete: {distance_discrete}")
+    #     return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], velocity, angle, distance_discrete
+
+    # def discretize_state(self):           PPO 1
+    #     previous_distance = self.distance 
+    #     # for radar in self.radars:
+    #     #     radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
+    #     # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
+    #     discrete_vel = int(round(self.vel, 1) * 10)      
+    #     # print(f"Discrete_vel: {discrete_vel}", end=" ")       
+    #     discrete_angle = int((self.angle + 90) % 360)
+    #     # print(f"Discrete_angle: {discrete_angle}", end=" ") 
+    #     self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
+    #     # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
+    #     # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
+    #     self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+    #     # print(f"Difference: {self.difference}", end=" ")
+    #     offset_x = self.center[0] - free_spot_rect.centerx        # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
+    #     offset_y = self.center[1] - free_spot_rect.centery     # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
+    #     # print(f"Offset x: {offset_x} Offset y: {offset_y}")
+        
+    #     return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
+
+    def discretize_state(self):
+        previous_distance = self.distance 
+        for radar in self.radars:
+            radar[1] = round(2 * (radar[1] / 205) - 1, 2)
+        # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
+        discrete_vel = round(self.vel / 6, 2) if self.vel >= 0 else round(self.vel / 4, 2)     
+        # print(f"Discrete_vel: {discrete_vel}")       
+        discrete_angle = round(2 * (((self.angle) % 360) / 360) - 1, 2)
+        # print(f"Discrete_angle: {discrete_angle}", end=" ") 
+        self.distance = round(2 * (math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)) / 730.26) - 1, 2)    # the distance of the car to the center of the parking spot
+        # print(f"Distance: {self.distance/ 730.26 :.2f}")
+        # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
+        # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
+        self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+        # print(f"Difference: {self.difference}", end=" ")
+        offset_x = round((self.center[0] - free_spot_rect.centerx) / 551.65, 2)     # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
+        offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
+        # print(f"Offset x: {offset_x} Offset y: {offset_y}")
+        
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], self.distance, discrete_vel, discrete_angle
 
 def draw_window(player_car):
     WIN.blit(PARKING_LOT, (0, 0))
@@ -382,84 +435,74 @@ def draw_window(player_car):
     pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
         
     player_car.draw()
+    # pygame.draw.circle(WIN, (0, 0, 255), free_spot_rect.center, 3)       # draw the center of the parking spot with blue color
     if intersection is not None:
         pygame.draw.rect(WIN, (255, 0, 0), intersection)            # draw a red rectangle around the point of intersection
 
-    Human_Player_text = LARGE_FONT.render(f"Human Player", 1, "white")   # 1 is the anti-aliasing level, keep it 1 for better quality
-    WIN.blit(Human_Player_text, (853, 62))          
-
-    pygame.draw.line(WIN, "white", (750, 141), (1100, 141), 1)    
-
-    Step_text = LARGE_FONT.render(f"Step", 1, "white")   
-    WIN.blit(Step_text, (795, 191))
-    Semicolon_text = LARGE_FONT.render(f":", 1, "white")   
-    WIN.blit(Semicolon_text, (845, 191))    
-    Dash_text = LARGE_FONT.render(f"-", 1, "white")   
-    WIN.blit(Dash_text, (864, 191))
-
-    current_time = time.time() - t_start
-    Time_text = LARGE_FONT.render(f"Time", 1, "white")   
-    WIN.blit(Time_text, (912, 191))
-    WIN.blit(Semicolon_text, (965, 191))    
-    Time_value_text = LARGE_FONT.render(f"{current_time:.2f}s", 1, "white")   
-    WIN.blit(Time_value_text, (984, 191))        
-
-    Inputs_text = LARGE_FONT.render(f"Inputs", 1, "white")
-    WIN.blit(Inputs_text, (890, 270))
-    Visual_inputs_text = SMALL_FONT.render(f"Visual inputs", 1, "white")
-    WIN.blit(Visual_inputs_text, (795, 314))
-
-    Rewards_text = LARGE_FONT.render(f"Rewards", 1, "white")
-    WIN.blit(Rewards_text, (886, 395))
-    None_text = SMALL_FONT.render(f"None", 1, "white")
-    WIN.blit(None_text, (795, 432))
-
-    Outputs_text = LARGE_FONT.render(f"Outputs", 1, "white")
-    WIN.blit(Outputs_text, (884, 513))
-
-    square_coordinates = [(900, 570), (840, 630), (900, 630), (960, 630)]
-    square_colors = ["black", "black", "black", "black"]
-    triangle_coordinates = [[(925,588), (917, 602), (933, 602)], [(858,655), (872, 663), (872, 647)], [(916,648), (933, 648), (925, 662)], [(978,663), (978, 647), (992, 655)]]
-
-    if "UP" in player_car.action:
-        square_colors[0] = "green"
-    elif "DOWN" in player_car.action:
-        square_colors[2] = "green"
-    if "LEFT" in player_car.action:
-        square_colors[1] = "green"
-    elif "RIGHT" in player_car.action:
-        square_colors[3] = "green"
-
-    for i in range(4):
-        pygame.draw.rect(WIN, square_colors[i], (square_coordinates[i][0], square_coordinates[i][1], 50, 50), 0)
-        pygame.draw.rect(WIN, "white", (square_coordinates[i][0], square_coordinates[i][1], 50, 50), 1)
-        pygame.draw.polygon(WIN, "white", triangle_coordinates[i], 0)
-
     pygame.display.update()
 
+def read_possible_states():
+    # create possible_states list to store visited states as tuples
+    possible_states = []
+    # read the possible states from the file possible_states_list.txt
+    with open("parking_game/MY_possible_states_list.txt", "r") as file:
+        for line in file:
+            state = ast.literal_eval(line.strip())
+            possible_states.append(state)
+    print(f"Possible states: {len(possible_states)}") 
+    return possible_states   
 
-run = True
+def update_possible_states(possible_states, states_to_add):
+
+    states_to_add = list(set(states_to_add))    # remove duplicates
+    for state in states_to_add:
+        possible_states.append(state)
+
+    # print the possible states, ordered by state
+    print(f"\nLength of possible states: {len(possible_states)}")
+    possible_states = list(set(possible_states))    # remove duplicates
+    print(f"Length of possible states after removing duplicates: {len(possible_states)}")
+    possible_states.sort()
+    
+    # delete the file possible_states.txt and write the possible states in it as a tuple
+    with open("parking_game/MY_possible_states_list.txt", "w") as file:
+        for state in possible_states:
+            file.write(str(state) + "\n")
+
+def binary_search(my_list, item):
+    i = bisect.bisect_left(my_list, item)
+    if i != len(my_list) and my_list[i] == item:
+        return True
+    else:
+        return False
+
+game_run = True
 clock = pygame.time.Clock()
 FPS = 20
 initialize_game()
 player_car = PlayerCar(6)
+states_to_add = []
+
 new_img = None
-# start_time = None
-t_start = time.time()
+start_time = None
 
 
-while run:
+
+while game_run:   
     clock.tick(FPS)
 
     for event in pygame.event.get():            
         if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-            run = False
+            game_run = False
             break
 
-    player_car.move_player()
+    # player_car.epsilon = player_car.min_epsilon + (player_car.max_epsilon - player_car.min_epsilon)* np.exp(-player_car.decay_rate * episode)
     player_car.check_radars(PARKING_LOT_BORDER_MASK)
-    player_car.check_collision()
+    # player_car.discretize_state()
+    parked = player_car.check_collision()
+    state = list(player_car.discretize_state())
+    print(f"State: {state}")
+    player_car.move_player()
     draw_window(player_car)
-
 
 pygame.quit()

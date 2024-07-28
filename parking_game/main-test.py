@@ -44,7 +44,7 @@ GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
 GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
 
 
-RED_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-red-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-red-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
+BLUE_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-darkblue-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-darkblue-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
 YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/car-yellow-wheels.png"), 40/162)       # this way all cars have the same width (40px) 
 PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink-wheels.png"), 40/162)
 # GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green.png"), 40/163)
@@ -191,7 +191,7 @@ class AbstractCar:
             if self.vel == 0:                          # if the car is stationary in the spot
                 if start_time is None:                 # if it just parked, start the timer
                     start_time = time.time()
-                elif  time.time() - start_time >= 2:   # else if the car has been stationary for 2 seconds, stop the game
+                elif  time.time() - start_time >= 1:   # else if the car has been stationary for 2 seconds, stop the game
                     self.reset()
                     return parked
             else:
@@ -349,18 +349,18 @@ class AbstractCar:
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
-    IMG = RED_CAR[0]
+    IMG = BLUE_CAR[0]
 
     def move_player(self):
         keys = pygame.key.get_pressed()
         throttling = False   
-        self.img = RED_CAR[0]           # the car image is set to the default image, so that it does not rotate when the player is not pressing the left or right arrow key     
+        self.img = BLUE_CAR[0]           # the car image is set to the default image, so that it does not rotate when the player is not pressing the left or right arrow key     
         if keys[pygame.K_LEFT]:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
                 self.rotate(left=True)          # Due to this limitation of keyboard, we can only detect two arrow key presses at a time. This means that if the player is pressing the left and the right arrow key
-                self.img = pygame.transform.flip(RED_CAR[1], True, False)     # and then presses the up arrow key, the car will not move, as this third key press will not be detected.                                
+                self.img = pygame.transform.flip(BLUE_CAR[1], True, False)     # and then presses the up arrow key, the car will not move, as this third key press will not be detected.                                
         if keys[pygame.K_RIGHT]:                
                 self.rotate(right=True)
-                self.img = RED_CAR[1]                                # we change the car img to the one that the wheels are turning
+                self.img = BLUE_CAR[1]                                # we change the car img to the one that the wheels are turning
         if not (keys[pygame.K_UP] and keys[pygame.K_DOWN]):          # if both keys are pressed, the car should not move
             if keys[pygame.K_UP]:
                 throttling = True
@@ -424,7 +424,7 @@ class PlayerCar(AbstractCar):           # the player car will have additional me
         offset_y = round((self.center[1] - free_spot_rect.centery) / 478.5, 2)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
         # print(f"Offset x: {offset_x} Offset y: {offset_y}")
         
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], self.distance, discrete_vel, discrete_angle
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
 
 def draw_window(player_car):
     WIN.blit(PARKING_LOT, (0, 0))
