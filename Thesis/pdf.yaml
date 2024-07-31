@@ -1,0 +1,71 @@
+filters:
+- pandoc-xnos
+- citeproc
+# cite-method: citeproc # citeproc, natbib, or biblatex
+# citeproc: true
+
+variables:
+  xnos-cleveref: True
+  tablenos-caption-name: Πίνακας
+  secnos-cleveref: True
+  secnos-plus-name: sec.
+  secnos-star-name: sec.
+  fignos-plus-name: Εικόνα
+  fignos-star-name: Εικόνα
+
+
+file-scope: false # Parse each file individually before combining for multifile documents. This will allow footnotes in different files with the same identifiers to work as expected. If this option is set, footnotes and links will not work across files.
+from: markdown
+
+input-files: [
+  0-frontmatter/0-frontmatter.md,
+
+  1-introduction/0-intro.md,
+
+  2-literature/0-intro.md,
+  2-literature/1-crossPlatformApps.md,
+  2-literature/2-humanCenteredDesign.md,
+  2-literature/3-nurseScheduling.md,
+
+  3-design/0-intro.md,
+  3-design/1-analysis.md,
+  3-design/2-competitiveSolutions.md,
+  3-design/3-designChoices.md,
+  3-design/4-wireframesAndPrototypes.md,
+  3-design/5-conclusion.md,
+
+  4-implementation/0-intro.md,
+  4-implementation/1-mvvm.md,
+  4-implementation/2-dataModel.md,
+  4-implementation/3-database.md,
+  4-implementation/4-localStorageAndBlob.md,
+  4-implementation/5-authentication.md,
+  4-implementation/6-server.md,
+  4-implementation/7-conclusion.md,
+
+  5-evaluation/0-intro.md,
+  5-evaluation/1-ux.md,
+  5-evaluation/1.5-methods.md,
+  5-evaluation/2-cognitiveWalkthrough.md,
+  5-evaluation/3-klm.md,
+  5-evaluation/4-userBased.md,
+  5-evaluation/5-algorithm.md,
+
+  6-conclusion/0-intro.md,
+  
+  bibliography/bibliography.md,
+
+  A-appendix/appendix.md,
+]
+
+log-file: log/pdf.log.json
+output-file: output/thesis_master.pdf
+pdf-engine: xelatex
+template: templates/eisvogel.tex
+reference-location: block # block, section, or document
+resource-path: [., chapter-1, chapter-2, chapter-3, chapter-4, chapter-5, chapter-6] #, chapter-7, chapter-8, chapter-9, chapter-10, chapter-11, chapter-12, chapter-13, chapter-14]
+standalone: true
+to: pdf
+top-level-division: chapter # part, chapter, section, or default:
+verbosity: WARNING # ERROR, WARNING, or INFO
+highlight-style: tango

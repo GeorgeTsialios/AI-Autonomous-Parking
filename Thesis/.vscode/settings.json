@@ -1,0 +1,78 @@
+{
+    "remark.format": {
+        "options.listItemIndent": "one"
+    },
+    "latex-workshop.latex.autoBuild.run": "never",
+    "markdownlint.run": "onSave",
+    "githubPullRequests.remotes":[
+        "origin",
+        "upstream",
+        "main"
+    ],
+    "cSpell.enabled": true,
+    "cSpell.dictionaries": [
+        "el"
+    ],
+    "cSpell.words": [
+        "Angeliki",
+        "Avouris",
+        "Elmasri",
+        "Firestore",
+        "Grath",
+        "Homebase",
+        "Horario",
+        "Ilias",
+        "Iliopoulou",
+        "Iosiphina",
+        "joinhomebase",
+        "multivalued",
+        "MVVM",
+        "Nikopolidi",
+        "Palaiologos",
+        "Planday",
+        "Qiany",
+        "Rehkopf",
+        "Roboto",
+        "Silberschatz",
+        "Stathoulia",
+        "wheniwork",
+        "wireframes",
+        "ανακατευθύνονται",
+        "αποκλειόμενες",
+        "διαλειτουργικότητα",
+        "διαπέρασης",
+        "διασπάσιμων",
+        "διεπαφών",
+        "επιταχυνσιόμετρο",
+        "Ηλιοπούλου",
+        "νηματική",
+        "Νικοπολίδη",
+        "Περιέκτης",
+        "περσόνα",
+        "περσόνας",
+        "περσόνες",
+        "πλειότιμο",
+        "πληθικότητα",
+        "προσβασιμότητα",
+        "προσβασιμότητας",
+        "προσπελάζει",
+        "Σταθούλια",
+        "συγκείμενο",
+        "συνεργατικότητα",
+        "ταυτοποιημένου",
+        "τεμνόμενη",
+        "φυλλομετρητή",
+        "φυλλομετρητής",
+        "χρονοπρογραμματισμό",
+        "χρονοπρογραμματισμός",
+        "Χρονοπρογραμματισμού"
+    ],
+
+    "[markdown]": {
+        "editor.fontFamily": "'Segoe UI'",
+        "editor.fontSize": 15
+    },
+
+    "workspaceKeybindings.buildPandoc.enabled": true,
+    "editor.fontVariations": false
+}
