@@ -1,0 +1,152 @@
+Parking:
+
+The AI consists of a Deep Neural Network with 3 hidden layers of 128 neurons each. It is trained with the Proximal Policy Optimization (PPO) algorithm, However, the hyperparameters of the PPO algorithm had to be hand tuned with multiple test runs before the training process.
+
+inputs:
+eight depth sensors - normalized to range [0, 1]
+speed
+position
+relative position to target
+ 
+outputs:
+force - in range [-1, 1]. If force ε [-1, 0], then it is a braking force (ie move reverse). If force ε [0, 1], then it is an engine/throttle force (ie move forward).
+steering - in range [-1, 1]. If steering ε [-1, 0], then it turns left. If steering ε [0, 1], then it turns right.
+
+He did not add a brake output because: "I removed the handbrake from the car-physics model, in order to simplify the learning process. At very early stages of the experiment the car was simply constantly triggering the handbrake, thus it was not able to move and it took very long for it to even start moving in any direction".
+
+reinforcement learning rewards and penalties:
+small rewards for getting closer to the parking spot
+larger reward when it reaches the parking spot and stops there. The final reward for reaching the parking spot is dependent on how parallel the car stops in relation to the actual parking position.  For instance, if the car stops in a 90° angle to the actual parking direction, then the AI will only be rewarded a very small amount, relative to the amount it would get for stopping completely parallel to the actual direction.
+small negative reward when it drives away from the parking spot 
+larger negative reward when it crashes into obstacles (The punishment for crashing into anything should be so high the reward for parking perfectly is not enough to reach the success threshold)
+
+Training process took about 23 hours on a computer with an i5 (8th gen) and a GTX 1070 with 100x simulation speed.
+
+Problem: The reward function includes the angle (0 degrees from target), that's why the AI never attempts to park backwards, because it would be considered the worst angle (180 degrees off from target).
+
+Problem: The set of sensors used (raycasts) is not correct for certain type of obstacles (lighting poles).That's because the AI can't tell where thin objects are unless they are exactly at a depth sensor. Therefore, it might crash into a lightning pole and learn nothing, because the sensors were clear.
+Solution: Boxcasts / Spherecasts / Colliders instead of raycasts but they increase training time.
+
+Suggestions: 
+- I can have a timer or negative reward for the time it takes, but it may cause to stick to a specific way of solving the problem.
+- The less options I give to the model, the quicker it will learn (like Sports Scheduling). So when we have a larger solution space (more inputs or outputs), this typically results in longer training times.
+- In the video, the parking spot was predetermined. It would be more realistic to have a set starting point for the car, with one random empty parking spot. This way we avoid overfitting and achieve generalization to other parking spots. However, this will increase training time. Another approach would be to train the model just like in this video and then train it on other parking spots. That is called Transfer learning.
+Overfitting is always a concern in RL. It depends on what your overall goal is. If your goal is to create a realistic automated parking assistant, you need to randomize the car spawn, the parking spot and even the parking lot shape, add parallel parking, pedestrians, other moving cars etc.
+- Hitting an obstacle or invalid driving location (sidewalk) should instantly end the simulation of that episode to iterate faster on problematic attempts and reduce training times. Problem: Punishing an agent too early and too often might cause the agent to simply stay still. Solution: reward it when it is moving continuously.
+- Spawn the car close to the target at first and then increase the average distance to the target slowly. This helps the AI get positive rewards much sooner by starting with easier scenarios.
+
+
+reinforcement learning (PP0) vs genetic/evolutionary algorithms (NEAT)
+episodes	vs	  generations
+reward function (provide feedback after each action of the agent) vs fitness function (only provide feedback at the end of an epoch)
+rate an action vs rate an individual's entire performance
+RL algorithms more goal oriented since they use mathematical formulas in order to adapt their policies to maximize their cumulative reward vs randomly changing the genetic information of the individuals which performed best in the previous generation
+Genetic algoritmhs have the advantage of being much easier to implement, however the are not a good fit for the parking problem, since the rewards are too sparse.
+ 
+
+Machine Learning from human perspective: Imagine being given a steering wheel, two pedals and a screen that simply showed 10 floating point numbers, with all information about your task being whether you are currently doing good or bad. Even then a human would have more prior knowledge of the task than a machine, since we will immediately associate the steering wheel and pedals with driving a car.
+
+
+
+
+How do you compare different deep reinforcement Learning (RL) algorithms like DQN, PPO, A3C, etc.?
+Comparing different Deep Reinforcement Learning (RL) algorithms like Deep Q-Network (DQN), Proximal Policy Optimization (PPO), Asynchronous Advantage Actor-Critic (A3C), and others requires considering various factors such as their learning mechanisms, performance, computational requirements, and suitability for different types of problems. Here's a comparative overview of these algorithms:
+
+1. Deep Q-Network (DQN)
+
+Learning Mechanism: Combines Q-Learning with deep neural networks. Uses a technique called experience replay and target networks to stabilize learning.
+Strengths: Good at learning policies in high-dimensional spaces using raw pixels as input.
+Limitations: Struggles with continuous action spaces and is less sample-efficient.
+Use Cases: Effective in discrete action spaces, like playing Atari games.
+
+2. Proximal Policy Optimization (PPO)
+
+Learning Mechanism: A policy gradient method that optimizes a surrogate objective function to prevent the policy from changing too much at each iteration, enhancing training stability.
+Strengths: Strikes a balance between sample efficiency, ease of implementation, and training stability. Works well in both discrete and continuous action spaces.
+Limitations: Can be slower to converge in environments with very high-dimensional action spaces.
+Use Cases: Suitable for a wide range of problems, from robotic control to playing complex games like Dota 2.
+
+3. Asynchronous Advantage Actor-Critic (A3C)
+
+Learning Mechanism: Uses multiple agents exploring different copies of the environment simultaneously. It updates a global network asynchronously, leading to diverse experience and faster learning.
+Strengths: More robust to hyperparameter changes. Can learn more diverse policies due to asynchronous updates.
+Limitations: Asynchronous updates can make training less stable and harder to debug.
+Use Cases: Useful in complex environments where exploration is crucial.
+
+4. Trust Region Policy Optimization (TRPO)
+
+Learning Mechanism: A policy gradient method designed to take the largest possible step in improving the policy while remaining within a certain trust region to avoid performance collapse.
+Strengths: Provides monotonic policy improvement guarantees.
+Limitations: Computationally expensive and complex to implement.
+Use Cases: Effective in environments where stability and reliability of policy improvement are critical.
+Comparison Factors
+
+Sample Efficiency: How many samples (state-action-reward tuples) the algorithm needs to learn an effective policy.
+Stability and Reliability: The consistency of the learning process and the algorithm’s robustness to hyperparameter settings.
+Scalability: How well the algorithm performs as the complexity of the environment increases.
+Computational Requirements: The computational resources needed for training, including memory and processing power.
+Suitability for Task Types: Whether the algorithm is better suited for discrete or continuous action spaces, and the complexity of the task.
+
+
+Pytorch vs TensorFlow
+
+https://builtin.com/data-science/pytorch-vs-tensorflow
+
+
+SB3: set of reliable RL algorithms implementations. It has an easy to use API/ interface.
+Reliable because:
+- The implementation is tested against published results from the original paper of each algorithm until they reproduce the same result.
+- They run many tests such as unit and performance tests and have a 96% code coverage
+- They have an active community with more than 3 million downloads and they fix the issues the community finds
+- Complete documentation with many έτοιμα examples and many tutorials
+
+Simpler reward functions are better, easier to generalize.
+
+
+
+
+Deep Reinforcement Learning algorithms (PPO, SAC, MA-POCA)
+Support for learning from demonstrations through two Imitation Learning algorithms (BC and GAIL)
+Curriculum Learning scenarios for complex tasks
+
+Reinforcement learning policy:  a mapping from observations (inputs) to actions (output). The behavior that the agent learns through training. The process for deciding which action to take. 
+Characteristic of reinforcement learning: rewards (positive or negative) are sparse (i.e. may not be provided at every step, but only when an agent arrives at a success or failure situation). That's why learning good policies can be difficult and time-consuming.
+Similar to both unsupervised and supervised learning, reinforcement learning also involves two tasks: attribute selection and model selection. Attribute selection is defining the set of observations for the robot that best help it complete its objective (inputs), while model selection is defining the form of the policy (algorithm, mapping from observations to actions) and its parameters. In practice, training behaviors is an iterative process that may require changing the attribute and model choices.
+All three branches of machine learning involve a training phase and an inference phase. At a high-level, the training phase involves building a model using the provided data (for example training the agent to park), while the inference phase involves applying this model to new, previously unseen, data (for example parking in a new environment).
+
+PyTorch is an open source library. It facilitates training and inference on CPUs and GPUs in a desktop or server. Within the ML-Agents Toolkit, when you train the behavior of an agent, the output is a model (.onnx) file that you can then associate with an Agent.
+One part of training models with PyTorch is setting the values of certain model (algorithm) attributes (called hyperparameters). Finding the right values of these hyperparameters can require a few iterations. That's why we leverage a visualization tool called TensorBoard. It allows the visualization of certain agent attributes (for example rewards) throughout training which can be helpful in both building intuitions for the different hyperparameters and setting the optimal values for your environment.
+
+The agents observation only contains information that the agent is aware of and is typically a subset of the environment state.
+
+In reinforcement learning, the end goal for the Agent is to discover a behavior (a Policy) that maximizes a reward.
+Typically, a reward is defined by your environment, and corresponds to reaching some goal. These are what we refer to as extrinsic rewards, as they are defined external of the learning algorithm.
+Rewards, however, can be defined outside of the environment as well, to encourage the agent to behave in certain ways, or to aid the learning of the true extrinsic reward. We refer to these rewards as intrinsic reward signals. The total reward that the agent will learn to maximize can be a mix of extrinsic and intrinsic reward signals.
+
+The ML-Agents Toolkit provides four reward signals that can be mixed and matched to help shape your agent's behavior:
+
+extrinsic: represents the rewards defined in your environment, and is enabled by default
+gail: represents an intrinsic reward signal that is defined by GAIL (see below)
+curiosity: represents an intrinsic reward signal that encourages exploration in sparse-reward environments that is defined by the Curiosity module.
+rnd: represents an intrinsic reward signal that encourages exploration in sparse-reward environments that is defined by the Curiosity module.
+(Τα τελευταία 2 ίσως με βοηθήσουν να αποτρέψω να μένει το αυτοκίνητο ακίνητο)
+
+2 reinforcement learning algorithms:
+
+Proximal Policy Optimization (PPO)
+Soft Actor-Critic (SAC)
+The default algorithm is PPO. In contrast with PPO, SAC is off-policy.
+
+Sparse-reward Environments: environments where the agent receives rare or infrequent rewards.
+In such environments, an agent may never receive a reward signal on which to jumpstart its training process. This is a scenario where the use of an intrinsic reward signal (like Curiosity) can be valuable.
+
+Imitation Learning: it is often easier to simply demonstrate the behavior we want an agent to perform, rather than attempting to have it learn via trial-and-error methods. Imitation Learning uses pairs of observations and actions from a demonstration of playing the game to learn a policy. Imitation learning can either be used alone or in conjunction with reinforcement learning to reduce the training time in sparse-reward environments.
+The ML-Agents Toolkit provides a way to learn directly from demonstrations, as well as use them to help speed up reward-based training (RL). We include two algorithms called Behavioral Cloning (BC) and Generative Adversarial Imitation Learning (GAIL).
+If you use them in comjuction with RL training (especially in environments that have sparse rewards) using pre-recorded demonstrations, you can generally enable both GAIL and Behavioral Cloning at LOW strengths in addition to having an extrinsic reward.
+Note: It is important to have a low strength GAIL reward signal, because GAIL introduces a survivor bias to the learning process. That is, by giving positive rewards based on similarity to the expert, the agent is incentivized to remain alive for as long as possible. This can directly conflict with goal-oriented tasks, where an agent's goal is to finish a task as quickly as possible. In these cases, we strongly recommend that you use a low strength GAIL reward signal and a sparse extrinisic signal when the agent achieves the task. This way, the GAIL reward signal will guide the agent until it discovers the extrnisic signal and will not overpower it. If the agent appears to be ignoring the extrinsic reward signal, you should reduce the strength of GAIL.
+
+
+Reinforcement Learning Problems:
+-The training data that are generated are dependent from the policy (the agent generates them by interacting with the environment). We do not have a static dataset like in supervised learning. This causes instability in the training process.
+-Very high sensitivity to hyperparameter tuning.
+Video from Arxiv Insights

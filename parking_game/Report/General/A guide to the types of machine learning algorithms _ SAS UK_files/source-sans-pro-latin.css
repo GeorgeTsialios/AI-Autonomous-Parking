@@ -1,0 +1,36 @@
+@font-face {
+font-family: 'SourceSansPro';
+font-style: normal;
+font-weight: 300;
+font-display: swap;
+src: local('Source Sans Pro Light'), local('SourceSansPro-Light'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-300.woff2') format('woff2'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-300.woff') format('woff');
+}
+@font-face {
+font-family: 'SourceSansPro';
+font-style: normal;
+font-weight: 400;
+font-display: swap;
+src: local('Source Sans Pro Regular'), local('SourceSansPro-Regular'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-regular.woff2') format('woff2'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-regular.woff') format('woff');
+}
+@font-face {
+font-family: 'SourceSansPro';
+font-style: normal;
+font-weight: 600;
+font-display: swap;
+src: local('Source Sans Pro SemiBold'), local('SourceSansPro-SemiBold'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-600.woff2') format('woff2'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-600.woff') format('woff');
+}
+@font-face {
+font-family: 'SourceSansPro';
+font-style: normal;
+font-weight: 700;
+font-display: swap;
+src: local('Source Sans Pro Bold'), local('SourceSansPro-Bold'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-700.woff2') format('woff2'),
+url('/styles/fonts/source-sans-pro/source-sans-pro-v11-latin-700.woff') format('woff');
+}

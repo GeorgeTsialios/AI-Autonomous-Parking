@@ -1,0 +1,86 @@
+@font-face {
+font-family: 'Roboto';
+font-display: swap;
+src: url("/styles/fonts/roboto-regular-webfont.eot");
+/* IE9 Compat Modes */
+src: url("/styles/fonts/roboto-regular-webfont.eot?#iefix") format("embedded-opentype"), url("/styles/fonts/roboto-regular-webfont.woff") format("woff"), url("/styles/fonts/roboto-regular-webfont.ttf") format("truetype"), url("/styles/fonts/roboto-regular-webfont.svg#svgFontName") format("svg");
+/* Legacy iOS */ }
+
+
+.sn-banner {
+display: -webkit-flex;
+display: -ms-flexbox;
+display: flex;
+-webkit-flex-direction: row;
+-ms-flex-direction: row;
+flex-direction: row;
+position: relative;
+background-color: #F5F5F5;
+width: 100%;
+-webkit-justify-content: space-between;
+-ms-flex-pack: justify;
+justify-content: space-between;
+padding: 8px 16px;
+-webkit-align-items: center;
+-ms-flex-align: center;
+align-items: center;
+border-bottom: 1px solid #E0E0E0;
+font-family: 'Roboto'; }
+.sn-banner .banner-container {
+display: -webkit-flex;
+display: -ms-flexbox;
+display: flex;
+-webkit-align-items: center;
+-ms-flex-align: center;
+align-items: center; }
+.sn-banner .banner-icon path {
+fill: #616161; }
+.sn-banner .banner-icon.btn:hover {
+color: inherit; }
+.sn-banner .banner-icon.btn-icon::before {
+font-size: 12px; }
+.sn-banner .banner-logo {
+width: 58px;
+height: 58px;
+border-radius: 13px; }
+.sn-banner .banner-content {
+display: -webkit-flex;
+display: -ms-flexbox;
+display: flex;
+-webkit-flex-direction: column;
+-ms-flex-direction: column;
+flex-direction: column;
+margin-left: 8px; }
+.sn-banner .banner-title {
+font-size: 12px;
+margin-bottom: 2px;
+color: #000000;
+letter-spacing: -0.02px;
+line-height: 14px; }
+.sn-banner .banner-subtitle {
+font-size: 10px;
+color: #616161;
+letter-spacing: 0.28px;
+line-height: 12px; }
+.sn-banner .banner-btn {
+border: 0;
+color: #01579B;
+font-size: 16px;
+line-height: 19px;
+font-weight: 500;
+letter-spacing: -0.2px;
+background: none; }
+.sn-banner.ios {
+background-color: #F2F2F7;
+border-bottom: 1px solid #D8D8DC;
+}
+.sn-banner.ios .banner-icon path {
+fill: #6C6C70; }
+.sn-banner.ios .banner-title {
+color: #1C1C1E; }
+.sn-banner.ios .banner-subtitle {
+color: #6C6C70; }
+.sn-banner.ios .banner-btn {
+color: #0040DD;
+font-weight: 400;
+letter-spacing: -0.35px; }

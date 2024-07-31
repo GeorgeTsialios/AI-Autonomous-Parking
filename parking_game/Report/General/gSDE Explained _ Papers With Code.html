@@ -1,0 +1,2760 @@
+<!DOCTYPE html>
+<!-- saved from url=(0038)https://paperswithcode.com/method/gsde -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <script type="text/javascript" async="" src="./gSDE Explained _ Papers With Code_files/analytics.js.download"></script><script type="text/javascript" async="" src="./gSDE Explained _ Papers With Code_files/js"></script><script>
+    const GTAG_ENABLED =  true ;
+    const GTAG_TRACKING_ID = "UA-121182717-1";
+    const SENTRY_DSN_FRONTEND = "".trim();
+    const GLOBAL_CSRF_TOKEN = 'gHOtzNWhtnpaCO7S1ooe1hz4I5DdPbgONVqJz4ePrlTL3vGWd0ANrJMYMu1aWMjB';
+    const MEDIA_URL = "https://production-media.paperswithcode.com/";
+    const ASSETS_URL = "https://production-assets.paperswithcode.com";
+    run_after_frontend_loaded = window.run_after_frontend_loaded || [];
+  </script>
+  <link rel="preconnect" href="https://production-assets.paperswithcode.com/"><link rel="dns-prefetch" href="https://production-assets.paperswithcode.com/"><link rel="preload" as="font" type="font/woff2" href="https://production-assets.paperswithcode.com/perf/fonts/65e877e527022735c1a1.woff2" crossorigin=""><link rel="preload" as="font" type="font/woff2" href="https://production-assets.paperswithcode.com/perf/fonts/917632e36982ca7933c8.woff2" crossorigin=""><link rel="preload" as="font" type="font/woff2" href="https://production-assets.paperswithcode.com/perf/fonts/f1405bd8a987c2ea8a67.woff2" crossorigin=""><script>(()=>{if(GTAG_ENABLED){const t=document.createElement("script");function n(){window.dataLayer.push(arguments)}t.src=`https://www.googletagmanager.com/gtag/js?id=${GTAG_TRACKING_ID}`,document.head.appendChild(t),window.dataLayer=window.dataLayer||[],window.gtag=n,n("js",new Date),n("config",GTAG_TRACKING_ID),window.captureOutboundLink=function(t){n("event","click",{event_category:"outbound",event_label:t})}}else window.captureOutboundLink=function(n){document.location=n}})();</script><script src="./gSDE Explained _ Papers With Code_files/js(1)"></script><link rel="preload" as="script" href="./gSDE Explained _ Papers With Code_files/766.4af6b88b.js.download"><link rel="preload" as="script" href="./gSDE Explained _ Papers With Code_files/351.a22a9607.js.download"><link rel="preload" as="script" href="./gSDE Explained _ Papers With Code_files/814.49dcf06c.js.download"><link rel="preload" as="style" href="./gSDE Explained _ Papers With Code_files/918.c41196c3.css"><link rel="preload" as="style" href="./gSDE Explained _ Papers With Code_files/view_method.e499b4af.css"><link rel="preload" as="script" href="./gSDE Explained _ Papers With Code_files/view_method.c1f0a493.js.download"><link rel="stylesheet" href="./gSDE Explained _ Papers With Code_files/918.c41196c3.css"><link rel="stylesheet" href="./gSDE Explained _ Papers With Code_files/view_method.e499b4af.css">
+  
+    
+
+
+  <!-- Metadata -->
+  <title>gSDE Explained | Papers With Code</title>
+  <meta name="description" content="Generalized State-Dependent Exploration, or gSDE, is an exploration method for reinforcement learning that uses more general features and re-sampling the noise periodically. 
+
+State-Dependent Exploration (SDE) is an intermediate solution for exploration that consists in adding noise as a function of the state $s_{t}$, to the deterministic action $\mu\left(\mathbf{s}_{t}\right)$. At the beginning of an episode, the parameters $\theta_{\epsilon}$ of that exploration function are drawn from a Gaussian distribution. The resulting action $\mathbf{a}_{t}$ is as follows:
+
+$$
+\mathbf{a}_{t}=\mu\left(\mathbf{s}_{t} ; \theta_{\mu}\right)+\epsilon\left(\mathbf{s}_{t} ; \theta_{\epsilon}\right), \quad \theta_{\epsilon} \sim \mathcal{N}\left(0, \sigma^{2}\right)
+$$
+
+This episode-based exploration is smoother and more consistent than the unstructured step-based exploration. Thus, during one episode, instead of oscillating around a mean value, the action a for a given state $s$ will be the same.
+
+In the case of a linear exploration function $\epsilon\left(\mathbf{s} ; \theta_{\epsilon}\right)=\theta_{\epsilon} \mathbf{s}$, by operation on Gaussian distributions, Rückstieß et al. show that the action element $\mathbf{a}_{j}$ is normally distributed:
+
+$$
+\pi]_{j}\left(\mathbf{a}_{j} \mid \mathbf{s}\right) \sim \mathcal{N}\left(\mu_{j}(\mathbf{s}), \hat{\sigma_{j}}^{2}\right)
+$$
+
+where $\hat{\sigma}$ is a diagonal matrix with elements $\hat{\sigma}_{j}=\sqrt{\sum_{i}\left(\sigma_{i j} \mathbf{s}_{i}\right)^{2}}$.
+
+Because we know the policy distribution, we can obtain the derivative of the log-likelihood $\log \pi(\mathbf{a} \mid \mathbf{s})$ with respect to the variance $\sigma$ :
+
+$$
+\frac{\partial \log \pi(\mathbf{a} \mid \mathbf{s})}{\partial \sigma_{i j}}=\frac{\left(\mathbf{a}_{j}-\mu_{j}\right)^{2}-\hat{\sigma_{j}}^{2}}{\hat{\sigma}_{j}^{3}} \frac{\mathbf{s}_{i}^{2} \sigma_{i j}}{\hat{\sigma_{j}}}
+$$
+
+This can be easily plugged into the likelihood ratio gradient estimator, which allows to adapt $\sigma$ during training. SDE is therefore compatible with standard policy gradient methods, while addressing most shortcomings of the unstructured exploration.
+
+For gSDE, two improvements are suggested:
+
+
+We sample the parameters $\theta_{\epsilon}$ of the exploration function every $n$ steps instead of every episode.
+Instead of the state s, we can in fact use any features. We chose policy features $\mathbf{z}_{\mu}\left(\mathbf{s} ; \theta_{\mathbf{z}_{\mu}}\right)$ (last layer before the deterministic output $\left.\mu(\mathbf{s})=\theta_{\mu} \mathbf{z}_{\mu}\left(\mathbf{s} ; \theta_{\mathbf{z}_{\mu}}\right)\right)$ as input to the noise function $\epsilon\left(\mathbf{s} ; \theta_{\epsilon}\right)=\theta_{\epsilon} \mathbf{z}_{\mu}(\mathbf{s})$">
+  
+
+
+  <!-- Open Graph protocol metadata -->
+  <meta property="og:title" content="Papers with Code - gSDE Explained">
+  <meta property="og:description" content="Generalized State-Dependent Exploration, or gSDE, is an exploration method for reinforcement learning that uses more general features and re-sampling the noise periodically. 
+
+State-Dependent Exploration (SDE) is an intermediate solution for exploration that consists in adding noise as a function of the state $s_{t}$, to the deterministic action $\mu\left(\mathbf{s}_{t}\right)$. At the beginning of an episode, the parameters $\theta_{\epsilon}$ of that exploration function are drawn from a Gaussian distribution. The resulting action $\mathbf{a}_{t}$ is as follows:
+
+$$
+\mathbf{a}_{t}=\mu\left(\mathbf{s}_{t} ; \theta_{\mu}\right)+\epsilon\left(\mathbf{s}_{t} ; \theta_{\epsilon}\right), \quad \theta_{\epsilon} \sim \mathcal{N}\left(0, \sigma^{2}\right)
+$$
+
+This episode-based exploration is smoother and more consistent than the unstructured step-based exploration. Thus, during one episode, instead of oscillating around a mean value, the action a for a given state $s$ will be the same.
+
+In the case of a linear exploration function $\epsilon\left(\mathbf{s} ; \theta_{\epsilon}\right)=\theta_{\epsilon} \mathbf{s}$, by operation on Gaussian distributions, Rückstieß et al. show that the action element $\mathbf{a}_{j}$ is normally distributed:
+
+$$
+\pi]_{j}\left(\mathbf{a}_{j} \mid \mathbf{s}\right) \sim \mathcal{N}\left(\mu_{j}(\mathbf{s}), \hat{\sigma_{j}}^{2}\right)
+$$
+
+where $\hat{\sigma}$ is a diagonal matrix with elements $\hat{\sigma}_{j}=\sqrt{\sum_{i}\left(\sigma_{i j} \mathbf{s}_{i}\right)^{2}}$.
+
+Because we know the policy distribution, we can obtain the derivative of the log-likelihood $\log \pi(\mathbf{a} \mid \mathbf{s})$ with respect to the variance $\sigma$ :
+
+$$
+\frac{\partial \log \pi(\mathbf{a} \mid \mathbf{s})}{\partial \sigma_{i j}}=\frac{\left(\mathbf{a}_{j}-\mu_{j}\right)^{2}-\hat{\sigma_{j}}^{2}}{\hat{\sigma}_{j}^{3}} \frac{\mathbf{s}_{i}^{2} \sigma_{i j}}{\hat{\sigma_{j}}}
+$$
+
+This can be easily plugged into the likelihood ratio gradient estimator, which allows to adapt $\sigma$ during training. SDE is therefore compatible with standard policy gradient methods, while addressing most shortcomings of the unstructured exploration.
+
+For gSDE, two improvements are suggested:
+
+
+We sample the parameters $\theta_{\epsilon}$ of the exploration function every $n$ steps instead of every episode.
+Instead of the state s, we can in fact use any features. We chose policy features $\mathbf{z}_{\mu}\left(\mathbf{s} ; \theta_{\mathbf{z}_{\mu}}\right)$ (last layer before the deterministic output $\left.\mu(\mathbf{s})=\theta_{\mu} \mathbf{z}_{\mu}\left(\mathbf{s} ; \theta_{\mathbf{z}_{\mu}}\right)\right)$ as input to the noise function $\epsilon\left(\mathbf{s} ; \theta_{\epsilon}\right)=\theta_{\epsilon} \mathbf{z}_{\mu}(\mathbf{s})$">
+  
+  <meta property="og:image" content="https://production-media.paperswithcode.com/methods/43efe733-bf41-4ee8-bedb-5087294e0d89.png">
+  
+  <meta property="og:url" content="https://paperswithcode.com/method/gsde">
+  
+
+
+  <!-- Twitter metadata -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@paperswithcode">
+  <meta name="twitter:title" content="Papers with Code - gSDE Explained">
+  <meta name="twitter:description" content="Generalized State-Dependent Exploration, or gSDE, is an exploration method for reinforcement learning that uses more general features and re-sampling the noise periodically. 
+
+State-Dependent Exploration (SDE) is an intermediate solution for exploration that consists in adding noise as a function of the state $s_{t}$, to the deterministic action $\mu\left(\mathbf{s}_{t}\right)$. At the beginning of an episode, the parameters $\theta_{\epsilon}$ of that exploration function are drawn from a Gaussian distribution. The resulting action $\mathbf{a}_{t}$ is as follows:
+
+$$
+\mathbf{a}_{t}=\mu\left(\mathbf{s}_{t} ; \theta_{\mu}\right)+\epsilon\left(\mathbf{s}_{t} ; \theta_{\epsilon}\right), \quad \theta_{\epsilon} \sim \mathcal{N}\left(0, \sigma^{2}\right)
+$$
+
+This episode-based exploration is smoother and more consistent than the unstructured step-based exploration. Thus, during one episode, instead of oscillating around a mean value, the action a for a given state $s$ will be the same.
+
+In the case of a linear exploration function $\epsilon\left(\mathbf{s} ; \theta_{\epsilon}\right)=\theta_{\epsilon} \mathbf{s}$, by operation on Gaussian distributions, Rückstieß et al. show that the action element $\mathbf{a}_{j}$ is normally distributed:
+
+$$
+\pi]_{j}\left(\mathbf{a}_{j} \mid \mathbf{s}\right) \sim \mathcal{N}\left(\mu_{j}(\mathbf{s}), \hat{\sigma_{j}}^{2}\right)
+$$
+
+where $\hat{\sigma}$ is a diagonal matrix with elements $\hat{\sigma}_{j}=\sqrt{\sum_{i}\left(\sigma_{i j} \mathbf{s}_{i}\right)^{2}}$.
+
+Because we know the policy distribution, we can obtain the derivative of the log-likelihood $\log \pi(\mathbf{a} \mid \mathbf{s})$ with respect to the variance $\sigma$ :
+
+$$
+\frac{\partial \log \pi(\mathbf{a} \mid \mathbf{s})}{\partial \sigma_{i j}}=\frac{\left(\mathbf{a}_{j}-\mu_{j}\right)^{2}-\hat{\sigma_{j}}^{2}}{\hat{\sigma}_{j}^{3}} \frac{\mathbf{s}_{i}^{2} \sigma_{i j}}{\hat{\sigma_{j}}}
+$$
+
+This can be easily plugged into the likelihood ratio gradient estimator, which allows to adapt $\sigma$ during training. SDE is therefore compatible with standard policy gradient methods, while addressing most shortcomings of the unstructured exploration.
+
+For gSDE, two improvements are suggested:
+
+
+We sample the parameters $\theta_{\epsilon}$ of the exploration function every $n$ steps instead of every episode.
+Instead of the state s, we can in fact use any features. We chose policy features $\mathbf{z}_{\mu}\left(\mathbf{s} ; \theta_{\mathbf{z}_{\mu}}\right)$ (last layer before the deterministic output $\left.\mu(\mathbf{s})=\theta_{\mu} \mathbf{z}_{\mu}\left(\mathbf{s} ; \theta_{\mathbf{z}_{\mu}}\right)\right)$ as input to the noise function $\epsilon\left(\mathbf{s} ; \theta_{\epsilon}\right)=\theta_{\epsilon} \mathbf{z}_{\mu}(\mathbf{s})$">
+  <meta name="twitter:creator" content="@paperswithcode">
+  <meta name="twitter:url" content="https://paperswithcode.com/method/gsde">
+  <meta name="twitter:domain" content="paperswithcode.com">
+
+
+<!-- JSON LD -->
+
+<script type="application/ld+json">{
+    "@context": "http://schema.org",
+    "@graph": {
+        "@type": "CreativeWork",
+        "@id": "gsde",
+        "name": "gSDE Explained",
+        "description": "Generalized State-Dependent Exploration, or gSDE, is an exploration method for reinforcement learning that uses more general features and re-sampling the noise periodically. \n\nState-Dependent Exploration (SDE) is an intermediate solution for exploration that consists in adding noise as a function of the state $s_{t}$, to the deterministic action $\\mu\\left(\\mathbf{s}_{t}\\right)$. At the beginning of an episode, the parameters $\\theta_{\\epsilon}$ of that exploration function are drawn from a Gaussian distribution. The resulting action $\\mathbf{a}_{t}$ is as follows:\n\n$$\n\\mathbf{a}_{t}=\\mu\\left(\\mathbf{s}_{t} ; \\theta_{\\mu}\\right)+\\epsilon\\left(\\mathbf{s}_{t} ; \\theta_{\\epsilon}\\right), \\quad \\theta_{\\epsilon} \\sim \\mathcal{N}\\left(0, \\sigma^{2}\\right)\n$$\n\nThis episode-based exploration is smoother and more consistent than the unstructured step-based exploration. Thus, during one episode, instead of oscillating around a mean value, the action a for a given state $s$ will be the same.\n\nIn the case of a linear exploration function $\\epsilon\\left(\\mathbf{s} ; \\theta_{\\epsilon}\\right)=\\theta_{\\epsilon} \\mathbf{s}$, by operation on Gaussian distributions, R\u00fcckstie\u00df et al. show that the action element $\\mathbf{a}_{j}$ is normally distributed:\n\n$$\n\\pi]_{j}\\left(\\mathbf{a}_{j} \\mid \\mathbf{s}\\right) \\sim \\mathcal{N}\\left(\\mu_{j}(\\mathbf{s}), \\hat{\\sigma_{j}}^{2}\\right)\n$$\n\nwhere $\\hat{\\sigma}$ is a diagonal matrix with elements $\\hat{\\sigma}_{j}=\\sqrt{\\sum_{i}\\left(\\sigma_{i j} \\mathbf{s}_{i}\\right)^{2}}$.\n\nBecause we know the policy distribution, we can obtain the derivative of the log-likelihood $\\log \\pi(\\mathbf{a} \\mid \\mathbf{s})$ with respect to the variance $\\sigma$ :\n\n$$\n\\frac{\\partial \\log \\pi(\\mathbf{a} \\mid \\mathbf{s})}{\\partial \\sigma_{i j}}=\\frac{\\left(\\mathbf{a}_{j}-\\mu_{j}\\right)^{2}-\\hat{\\sigma_{j}}^{2}}{\\hat{\\sigma}_{j}^{3}} \\frac{\\mathbf{s}_{i}^{2} \\sigma_{i j}}{\\hat{\\sigma_{j}}}\n$$\n\nThis can be easily plugged into the likelihood ratio gradient estimator, which allows to adapt $\\sigma$ during training. SDE is therefore compatible with standard policy gradient methods, while addressing most shortcomings of the unstructured exploration.\n\nFor gSDE, two improvements are suggested:\n\n\nWe sample the parameters $\\theta_{\\epsilon}$ of the exploration function every $n$ steps instead of every episode.\nInstead of the state s, we can in fact use any features. We chose policy features $\\mathbf{z}_{\\mu}\\left(\\mathbf{s} ; \\theta_{\\mathbf{z}_{\\mu}}\\right)$ (last layer before the deterministic output $\\left.\\mu(\\mathbf{s})=\\theta_{\\mu} \\mathbf{z}_{\\mu}\\left(\\mathbf{s} ; \\theta_{\\mathbf{z}_{\\mu}}\\right)\\right)$ as input to the noise function $\\epsilon\\left(\\mathbf{s} ; \\theta_{\\epsilon}\\right)=\\theta_{\\epsilon} \\mathbf{z}_{\\mu}(\\mathbf{s})$",
+        "url": "https://paperswithcode.com/method/gsde",
+        "image": "https://production-media.paperswithcode.com/methods/43efe733-bf41-4ee8-bedb-5087294e0d89.png",
+        "headline": "gSDE Explained"
+    }
+}</script>
+
+  
+  <meta name="theme-color" content="#fff">
+  <link rel="manifest" href="https://production-assets.paperswithcode.com/static/manifest.web.json">
+
+  
+  
+<script src="./gSDE Explained _ Papers With Code_files/tex-chtml.js.download"></script><link rel="stylesheet" type="text/css" href="./gSDE Explained _ Papers With Code_files/333.c2c69a19.css"><style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-math {
+  display: inline-block;
+  text-align: left;
+  line-height: 0;
+  text-indent: 0;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 100%;
+  font-size-adjust: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  word-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  padding: 1px 0;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="CHTML"][display="true"][width="full"] {
+  display: flex;
+}
+
+mjx-container[jax="CHTML"][display="true"] mjx-math {
+  padding: 0;
+}
+
+mjx-container[jax="CHTML"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="CHTML"][justify="right"] {
+  text-align: right;
+}
+
+mjx-mrow {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-inferredMrow {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mi {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mo {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-stretchy-h {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-stretchy-h > * {
+  display: table-cell;
+  width: 0;
+}
+
+mjx-stretchy-h > * > mjx-c {
+  display: inline-block;
+  transform: scalex(1.0000001);
+}
+
+mjx-stretchy-h > * > mjx-c::before {
+  display: inline-block;
+  padding: .001em 0;
+  width: initial;
+}
+
+mjx-stretchy-h > mjx-ext {
+  overflow: hidden;
+  width: 100%;
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c::before {
+  transform: scalex(500);
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c {
+  width: 0;
+}
+
+mjx-stretchy-h > mjx-beg > mjx-c {
+  margin-right: -.1em;
+}
+
+mjx-stretchy-h > mjx-end > mjx-c {
+  margin-left: -.1em;
+}
+
+mjx-stretchy-v {
+  display: inline-block;
+}
+
+mjx-stretchy-v > * {
+  display: block;
+}
+
+mjx-stretchy-v > mjx-beg {
+  height: 0;
+}
+
+mjx-stretchy-v > mjx-end > mjx-c {
+  display: block;
+}
+
+mjx-stretchy-v > * > mjx-c {
+  transform: scaley(1.0000001);
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+mjx-stretchy-v > mjx-ext {
+  display: block;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0px solid transparent;
+  overflow: hidden;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c::before {
+  width: initial;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c {
+  transform: scaleY(500) translateY(.1em);
+  overflow: visible;
+}
+
+mjx-mark {
+  display: inline-block;
+  height: 0px;
+}
+
+mjx-mn {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-ms {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mspace {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mpadded {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-rbox {
+  display: inline-block;
+  position: relative;
+}
+
+mjx-menclose {
+  display: inline-block;
+  text-align: left;
+  position: relative;
+}
+
+mjx-menclose > mjx-dstrike {
+  display: inline-block;
+  left: 0;
+  top: 0;
+  position: absolute;
+  border-top: 0.067em solid;
+  transform-origin: top left;
+}
+
+mjx-menclose > mjx-ustrike {
+  display: inline-block;
+  left: 0;
+  bottom: 0;
+  position: absolute;
+  border-top: 0.067em solid;
+  transform-origin: bottom left;
+}
+
+mjx-menclose > mjx-hstrike {
+  border-top: 0.067em solid;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 50%;
+  transform: translateY(0.034em);
+}
+
+mjx-menclose > mjx-vstrike {
+  border-left: 0.067em solid;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 50%;
+  transform: translateX(0.034em);
+}
+
+mjx-menclose > mjx-rbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  border: 0.067em solid;
+  border-radius: 0.267em;
+}
+
+mjx-menclose > mjx-cbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  border: 0.067em solid;
+  border-radius: 50%;
+}
+
+mjx-menclose > mjx-arrow {
+  position: absolute;
+  left: 0;
+  bottom: 50%;
+  height: 0;
+  width: 0;
+}
+
+mjx-menclose > mjx-arrow > * {
+  display: block;
+  position: absolute;
+  transform-origin: bottom;
+  border-left: 0.268em solid;
+  border-right: 0;
+  box-sizing: border-box;
+}
+
+mjx-menclose > mjx-arrow > mjx-aline {
+  left: 0;
+  top: -0.034em;
+  right: 0.201em;
+  height: 0;
+  border-top: 0.067em solid;
+  border-left: 0;
+}
+
+mjx-menclose > mjx-arrow[double] > mjx-aline {
+  left: 0.201em;
+  height: 0;
+}
+
+mjx-menclose > mjx-arrow > mjx-rthead {
+  transform: skewX(0.464rad);
+  right: 0;
+  bottom: -1px;
+  border-bottom: 1px solid transparent;
+  border-top: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-rbhead {
+  transform: skewX(-0.464rad);
+  transform-origin: top;
+  right: 0;
+  top: -1px;
+  border-top: 1px solid transparent;
+  border-bottom: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-lthead {
+  transform: skewX(-0.464rad);
+  left: 0;
+  bottom: -1px;
+  border-left: 0;
+  border-right: 0.268em solid;
+  border-bottom: 1px solid transparent;
+  border-top: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-lbhead {
+  transform: skewX(0.464rad);
+  transform-origin: top;
+  left: 0;
+  top: -1px;
+  border-left: 0;
+  border-right: 0.268em solid;
+  border-top: 1px solid transparent;
+  border-bottom: 0.134em solid transparent;
+}
+
+mjx-menclose > dbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.3em;
+  width: 0.6em;
+  border: 0.067em solid;
+  border-radius: 50%;
+  clip-path: inset(0 0 0 0.3em);
+  box-sizing: border-box;
+}
+
+mjx-mfrac {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-frac {
+  display: inline-block;
+  vertical-align: 0.17em;
+  padding: 0 .22em;
+}
+
+mjx-frac[type="d"] {
+  vertical-align: .04em;
+}
+
+mjx-frac[delims] {
+  padding: 0 .1em;
+}
+
+mjx-frac[atop] {
+  padding: 0 .12em;
+}
+
+mjx-frac[atop][delims] {
+  padding: 0;
+}
+
+mjx-dtable {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-dtable > * {
+  font-size: 2000%;
+}
+
+mjx-dbox {
+  display: block;
+  font-size: 5%;
+}
+
+mjx-num {
+  display: block;
+  text-align: center;
+}
+
+mjx-den {
+  display: block;
+  text-align: center;
+}
+
+mjx-mfrac[bevelled] > mjx-num {
+  display: inline-block;
+}
+
+mjx-mfrac[bevelled] > mjx-den {
+  display: inline-block;
+}
+
+mjx-den[align="right"], mjx-num[align="right"] {
+  text-align: right;
+}
+
+mjx-den[align="left"], mjx-num[align="left"] {
+  text-align: left;
+}
+
+mjx-nstrut {
+  display: inline-block;
+  height: .054em;
+  width: 0;
+  vertical-align: -.054em;
+}
+
+mjx-nstrut[type="d"] {
+  height: .217em;
+  vertical-align: -.217em;
+}
+
+mjx-dstrut {
+  display: inline-block;
+  height: .505em;
+  width: 0;
+}
+
+mjx-dstrut[type="d"] {
+  height: .726em;
+}
+
+mjx-line {
+  display: block;
+  box-sizing: border-box;
+  min-height: 1px;
+  height: .06em;
+  border-top: .06em solid;
+  margin: .06em -.1em;
+  overflow: hidden;
+}
+
+mjx-line[type="d"] {
+  margin: .18em -.1em;
+}
+
+mjx-msqrt {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-root {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+mjx-surd {
+  display: inline-block;
+  vertical-align: top;
+}
+
+mjx-sqrt {
+  display: inline-block;
+  padding-top: .07em;
+}
+
+mjx-sqrt > mjx-box {
+  border-top: .07em solid;
+}
+
+mjx-sqrt.mjx-tall > mjx-box {
+  padding-left: .3em;
+  margin-left: -.3em;
+}
+
+mjx-mroot {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-msub {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-msup {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-msubsup {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-script {
+  display: inline-block;
+  padding-right: .05em;
+}
+
+mjx-script > * {
+  display: block;
+}
+
+mjx-munder {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-over {
+  text-align: left;
+}
+
+mjx-munder:not([limits="false"]) {
+  display: inline-table;
+}
+
+mjx-munder > mjx-row {
+  text-align: left;
+}
+
+mjx-under {
+  padding-bottom: .1em;
+}
+
+mjx-mover {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mover:not([limits="false"]) {
+  padding-top: .1em;
+}
+
+mjx-mover:not([limits="false"]) > * {
+  display: block;
+  text-align: left;
+}
+
+mjx-munderover {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-munderover:not([limits="false"]) {
+  padding-top: .1em;
+}
+
+mjx-munderover:not([limits="false"]) > * {
+  display: block;
+}
+
+mjx-mmultiscripts {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-prescripts {
+  display: inline-table;
+  padding-left: .05em;
+}
+
+mjx-scripts {
+  display: inline-table;
+  padding-right: .05em;
+}
+
+mjx-prescripts > mjx-row > mjx-cell {
+  text-align: right;
+}
+
+mjx-mfenced {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mtable {
+  display: inline-block;
+  text-align: center;
+  vertical-align: .25em;
+  position: relative;
+  box-sizing: border-box;
+}
+
+mjx-labels {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+mjx-table {
+  display: inline-block;
+  vertical-align: -.5ex;
+}
+
+mjx-table > mjx-itable {
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+mjx-labels > mjx-itable {
+  position: absolute;
+  top: 0;
+}
+
+mjx-mtable[justify="left"] {
+  text-align: left;
+}
+
+mjx-mtable[justify="right"] {
+  text-align: right;
+}
+
+mjx-mtable[justify="left"][side="left"] {
+  padding-right: 0 ! important;
+}
+
+mjx-mtable[justify="left"][side="right"] {
+  padding-left: 0 ! important;
+}
+
+mjx-mtable[justify="right"][side="left"] {
+  padding-right: 0 ! important;
+}
+
+mjx-mtable[justify="right"][side="right"] {
+  padding-left: 0 ! important;
+}
+
+mjx-mtable[align] {
+  vertical-align: baseline;
+}
+
+mjx-mtable[align="top"] > mjx-table {
+  vertical-align: top;
+}
+
+mjx-mtable[align="bottom"] > mjx-table {
+  vertical-align: bottom;
+}
+
+mjx-mtable[side="right"] mjx-labels {
+  min-width: 100%;
+}
+
+mjx-mtr {
+  display: table-row;
+  text-align: left;
+}
+
+mjx-mtr[rowalign="top"] > mjx-mtd {
+  vertical-align: top;
+}
+
+mjx-mtr[rowalign="center"] > mjx-mtd {
+  vertical-align: middle;
+}
+
+mjx-mtr[rowalign="bottom"] > mjx-mtd {
+  vertical-align: bottom;
+}
+
+mjx-mtr[rowalign="baseline"] > mjx-mtd {
+  vertical-align: baseline;
+}
+
+mjx-mtr[rowalign="axis"] > mjx-mtd {
+  vertical-align: .25em;
+}
+
+mjx-mlabeledtr {
+  display: table-row;
+  text-align: left;
+}
+
+mjx-mlabeledtr[rowalign="top"] > mjx-mtd {
+  vertical-align: top;
+}
+
+mjx-mlabeledtr[rowalign="center"] > mjx-mtd {
+  vertical-align: middle;
+}
+
+mjx-mlabeledtr[rowalign="bottom"] > mjx-mtd {
+  vertical-align: bottom;
+}
+
+mjx-mlabeledtr[rowalign="baseline"] > mjx-mtd {
+  vertical-align: baseline;
+}
+
+mjx-mlabeledtr[rowalign="axis"] > mjx-mtd {
+  vertical-align: .25em;
+}
+
+mjx-mtd {
+  display: table-cell;
+  text-align: center;
+  padding: .215em .4em;
+}
+
+mjx-mtd:first-child {
+  padding-left: 0;
+}
+
+mjx-mtd:last-child {
+  padding-right: 0;
+}
+
+mjx-mtable > * > mjx-itable > *:first-child > mjx-mtd {
+  padding-top: 0;
+}
+
+mjx-mtable > * > mjx-itable > *:last-child > mjx-mtd {
+  padding-bottom: 0;
+}
+
+mjx-tstrut {
+  display: inline-block;
+  height: 1em;
+  vertical-align: -.25em;
+}
+
+mjx-labels[align="left"] > mjx-mtr > mjx-mtd {
+  text-align: left;
+}
+
+mjx-labels[align="right"] > mjx-mtr > mjx-mtd {
+  text-align: right;
+}
+
+mjx-mtr mjx-mtd[rowalign="top"], mjx-mlabeledtr mjx-mtd[rowalign="top"] {
+  vertical-align: top;
+}
+
+mjx-mtr mjx-mtd[rowalign="center"], mjx-mlabeledtr mjx-mtd[rowalign="center"] {
+  vertical-align: middle;
+}
+
+mjx-mtr mjx-mtd[rowalign="bottom"], mjx-mlabeledtr mjx-mtd[rowalign="bottom"] {
+  vertical-align: bottom;
+}
+
+mjx-mtr mjx-mtd[rowalign="baseline"], mjx-mlabeledtr mjx-mtd[rowalign="baseline"] {
+  vertical-align: baseline;
+}
+
+mjx-mtr mjx-mtd[rowalign="axis"], mjx-mlabeledtr mjx-mtd[rowalign="axis"] {
+  vertical-align: .25em;
+}
+
+mjx-maction {
+  display: inline-block;
+  text-align: left;
+  position: relative;
+}
+
+mjx-maction > mjx-tool {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  z-index: 500;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+mjx-maction[toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+mjx-mglyph {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mglyph > img {
+  display: inline-block;
+  border: 0;
+  padding: 0;
+}
+
+mjx-semantics {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-annotation {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-annotation-xml {
+  display: inline-block;
+  text-align: left;
+  font-family: initial;
+  line-height: normal;
+}
+
+mjx-TeXAtom {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c {
+  display: inline-block;
+}
+
+mjx-utext {
+  display: inline-block;
+  padding: .75em 0 .2em 0;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://production-assets.paperswithcode.com/static/js/mathjax/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+
+mjx-c.mjx-c28::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c29::before {
+  padding: 0.75em 0.389em 0.25em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c2B::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "+";
+}
+
+mjx-c.mjx-c2C::before {
+  padding: 0.121em 0.278em 0.194em 0;
+  content: ",";
+}
+
+mjx-c.mjx-c30::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "0";
+}
+
+mjx-c.mjx-c32::before {
+  padding: 0.666em 0.5em 0 0;
+  content: "2";
+}
+
+mjx-c.mjx-c33::before {
+  padding: 0.665em 0.5em 0.022em 0;
+  content: "3";
+}
+
+mjx-c.mjx-c3B::before {
+  padding: 0.43em 0.278em 0.194em 0;
+  content: ";";
+}
+
+mjx-c.mjx-c3D::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "=";
+}
+
+mjx-c.mjx-c5D::before {
+  padding: 0.75em 0.278em 0.25em 0;
+  content: "]";
+}
+
+mjx-c.mjx-c5E::before {
+  padding: 0.694em 0.5em 0 0;
+  content: "^";
+}
+
+mjx-c.mjx-c67::before {
+  padding: 0.453em 0.5em 0.206em 0;
+  content: "g";
+}
+
+mjx-c.mjx-c6C::before {
+  padding: 0.694em 0.278em 0 0;
+  content: "l";
+}
+
+mjx-c.mjx-c6F::before {
+  padding: 0.448em 0.5em 0.01em 0;
+  content: "o";
+}
+
+mjx-c.mjx-c2061::before {
+  padding: 0 0 0 0;
+  content: "";
+}
+
+mjx-c.mjx-c2202::before {
+  padding: 0.715em 0.566em 0.022em 0;
+  content: "\2202";
+}
+
+[noIC] mjx-c.mjx-c2202:last-child::before {
+  padding-right: 0.531em;
+}
+
+mjx-c.mjx-c2212::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "\2212";
+}
+
+mjx-c.mjx-c2223::before {
+  padding: 0.75em 0.278em 0.249em 0;
+  content: "\2223";
+}
+
+mjx-c.mjx-c223C::before {
+  padding: 0.367em 0.778em 0 0;
+  content: "\223C";
+}
+
+mjx-c.mjx-c1D41A.TEX-B::before {
+  padding: 0.453em 0.559em 0.006em 0;
+  content: "a";
+}
+
+mjx-c.mjx-c1D42C.TEX-B::before {
+  padding: 0.453em 0.454em 0.006em 0;
+  content: "s";
+}
+
+mjx-c.mjx-c1D433.TEX-B::before {
+  padding: 0.444em 0.511em 0 0;
+  content: "z";
+}
+
+mjx-c.mjx-c1D456.TEX-I::before {
+  padding: 0.661em 0.345em 0.011em 0;
+  content: "i";
+}
+
+mjx-c.mjx-c1D457.TEX-I::before {
+  padding: 0.661em 0.412em 0.204em 0;
+  content: "j";
+}
+
+mjx-c.mjx-c1D45B.TEX-I::before {
+  padding: 0.442em 0.6em 0.011em 0;
+  content: "n";
+}
+
+mjx-c.mjx-c1D460.TEX-I::before {
+  padding: 0.442em 0.469em 0.01em 0;
+  content: "s";
+}
+
+mjx-c.mjx-c1D461.TEX-I::before {
+  padding: 0.626em 0.361em 0.011em 0;
+  content: "t";
+}
+
+mjx-c.mjx-c1D703.TEX-I::before {
+  padding: 0.705em 0.469em 0.01em 0;
+  content: "\3B8";
+}
+
+mjx-c.mjx-c1D707.TEX-I::before {
+  padding: 0.442em 0.603em 0.216em 0;
+  content: "\3BC";
+}
+
+mjx-c.mjx-c1D70B.TEX-I::before {
+  padding: 0.431em 0.57em 0.011em 0;
+  content: "\3C0";
+}
+
+mjx-c.mjx-c1D70E.TEX-I::before {
+  padding: 0.431em 0.571em 0.011em 0;
+  content: "\3C3";
+}
+
+mjx-c.mjx-c1D716.TEX-I::before {
+  padding: 0.431em 0.406em 0.011em 0;
+  content: "\3F5";
+}
+
+mjx-c.mjx-c28.TEX-S1::before {
+  padding: 0.85em 0.458em 0.349em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c29.TEX-S1::before {
+  padding: 0.85em 0.458em 0.349em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c2211.TEX-S1::before {
+  padding: 0.75em 1.056em 0.25em 0;
+  content: "\2211";
+}
+
+mjx-c.mjx-c28.TEX-S2::before {
+  padding: 1.15em 0.597em 0.649em 0;
+  content: "(";
+}
+
+mjx-c.mjx-c29.TEX-S2::before {
+  padding: 1.15em 0.597em 0.649em 0;
+  content: ")";
+}
+
+mjx-c.mjx-c221A.TEX-S2::before {
+  padding: 1.15em 1.02em 0.65em 0;
+  content: "\221A";
+}
+
+[noIC] mjx-c.mjx-c221A.TEX-S2:last-child::before {
+  padding-right: 1em;
+}
+
+mjx-c.mjx-c4E.TEX-C::before {
+  padding: 0.789em 0.979em 0.05em 0;
+  content: "N";
+}
+
+[noIC] mjx-c.mjx-c4E.TEX-C:last-child::before {
+  padding-right: 0.82em;
+}
+</style></head>
+<body>
+
+
+
+
+    
+
+<nav class="navbar navbar-expand-lg navbar-light header">
+  <a class="navbar-brand" href="https://paperswithcode.com/">
+    
+      <span class=" icon-wrapper" data-name="pwc"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M88 128h48v256H88zm144 0h48v256h-48zm-72 16h48v224h-48zm144 0h48v224h-48zm72-16h48v256h-48z"></path><path d="M104 104V56H16v400h88v-48H64V104zm304-48v48h40v304h-40v48h88V56z"></path></svg></span>
+    
+  </a>
+
+  <div class="navbar-mobile-twitter d-lg-none">
+    <a rel="noreferrer" href="https://twitter.com/paperswithcode">
+      <span class=" icon-wrapper icon-fa icon-fa-brands" data-name="twitter"><svg viewBox="0 0 512.001 515.25" xmlns="http://www.w3.org/2000/svg"><path d="M459.37 152.016c.326 4.548.326 9.097.326 13.645 0 138.72-105.583 298.558-298.559 298.558C101.685 464.22 46.457 447 0 417.114c8.447.973 16.568 1.298 25.34 1.298 49.054 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.113-72.772 6.499.975 12.996 1.624 19.819 1.624 9.42 0 18.843-1.3 27.613-3.573-48.08-9.747-84.142-51.98-84.142-102.984v-1.3c13.968 7.798 30.213 12.67 47.43 13.32-28.263-18.843-46.78-51.006-46.78-87.391 0-19.492 5.196-37.36 14.294-52.954 51.654 63.674 129.3 105.258 216.364 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.827 46.782-104.934 104.934-104.934 30.214 0 57.502 12.67 76.671 33.136 23.715-4.548 46.455-13.319 66.599-25.34-7.798 24.367-24.366 44.834-46.132 57.828 21.117-2.274 41.584-8.122 60.426-16.244-14.292 20.791-32.161 39.309-52.628 54.253z"></path></svg></span>
+    </a>
+  </div>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-bs-toggle="collapse" data-target="#top-menu" data-bs-target="#top-menu" aria-controls="top-menu" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="top-menu">
+    <ul class="navbar-nav mr-auto navbar-nav__left light-header">
+      <li class="nav-item header-search">
+        <form action="https://paperswithcode.com/search" method="get" id="id_global_search_form" autocomplete="off">
+          <input type="text" name="q_meta" style="display:none" id="q_meta">
+          <input type="hidden" name="q_type" id="q_type">
+          <input id="id_global_search_input" autocomplete="off" value="" name="q" class="global-search" type="search" placeholder="Search">
+          <button type="submit" class="icon"><span class=" icon-wrapper icon-fa icon-fa-light" data-name="search"><svg viewBox="0 0 512.025 520.146" xmlns="http://www.w3.org/2000/svg"><path d="M508.5 482.6c4.7 4.7 4.7 12.3 0 17l-9.9 9.9c-4.7 4.7-12.3 4.7-17 0l-129-129c-2.2-2.3-3.5-5.3-3.5-8.5v-10.2C312 396 262.5 417 208 417 93.1 417 0 323.9 0 209S93.1 1 208 1s208 93.1 208 208c0 54.5-21 104-55.3 141.1H371c3.2 0 6.2 1.2 8.5 3.5zM208 385c97.3 0 176-78.7 176-176S305.3 33 208 33 32 111.7 32 209s78.7 176 176 176z"></path></svg></span></button>
+        <ul id="result-box"></ul></form>
+      </li>
+
+      
+        
+        
+        
+        <li class="nav-item">
+          <a class="nav-link" href="https://paperswithcode.com/sota">
+            Browse State-of-the-Art
+          </a>
+        </li>
+
+        
+          <li class="nav-item">
+            <a class="nav-link" href="https://paperswithcode.com/datasets"> Datasets </a>
+          </li>
+        
+
+        
+            <li class="nav-item">
+              <a class="nav-link" href="https://paperswithcode.com/methods">Methods</a>
+            </li>
+        
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" role="button" id="navbarDropdownRepro" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            More
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdownRepro">
+        
+            <a class="dropdown-item" href="https://paperswithcode.com/newsletter">Newsletter</a>
+            <a class="dropdown-item" href="https://paperswithcode.com/rc2022">RC2022</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="https://paperswithcode.com/about">About</a>
+            <a class="dropdown-item" href="https://paperswithcode.com/trends">Trends</a>
+              
+                  <a class="dropdown-item" href="https://portal.paperswithcode.com/">
+                      Portals
+                  </a>
+              
+              
+                  <a class="dropdown-item" href="https://paperswithcode.com/libraries"> Libraries </a>
+              
+          </div>
+        </li>
+
+          
+
+
+
+      
+    </ul>
+
+    <ul class="navbar-nav ml-auto navbar-nav__right navbar-subscribe justify-content-center align-items-center">
+      
+
+      <li class="nav-item">
+        <a class="nav-link" rel="noreferrer" href="https://twitter.com/paperswithcode">
+          <span class="nav-link-social-icon icon-wrapper icon-fa icon-fa-brands" data-name="twitter"><svg viewBox="0 0 512.001 515.25" xmlns="http://www.w3.org/2000/svg"><path d="M459.37 152.016c.326 4.548.326 9.097.326 13.645 0 138.72-105.583 298.558-298.559 298.558C101.685 464.22 46.457 447 0 417.114c8.447.973 16.568 1.298 25.34 1.298 49.054 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.113-72.772 6.499.975 12.996 1.624 19.819 1.624 9.42 0 18.843-1.3 27.613-3.573-48.08-9.747-84.142-51.98-84.142-102.984v-1.3c13.968 7.798 30.213 12.67 47.43 13.32-28.263-18.843-46.78-51.006-46.78-87.391 0-19.492 5.196-37.36 14.294-52.954 51.654 63.674 129.3 105.258 216.364 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.827 46.782-104.934 104.934-104.934 30.214 0 57.502 12.67 76.671 33.136 23.715-4.548 46.455-13.319 66.599-25.34-7.798 24.367-24.366 44.834-46.132 57.828 21.117-2.274 41.584-8.122 60.426-16.244-14.292 20.791-32.161 39.309-52.628 54.253z"></path></svg></span>
+        </a>
+      </li>
+
+     
+
+      
+        <li class="nav-item">
+          <a id="signin-link" class="nav-link" href="https://paperswithcode.com/accounts/login?next=/method/gsde">Sign In</a>
+        </li>
+      
+    </ul>
+  </div>
+</nav>
+
+
+
+
+
+<!-- Page modals -->
+<div class="modal fade" id="emailModal" tabindex="-1" role="dialog" aria-labelledby="emailModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="emailModalLabel">Subscribe to the PwC Newsletter</h3>
+        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form action="https://paperswithcode.com/method/gsde" method="post">
+        <div class="modal-body" style="opacity: 0;">
+          <div class="modal-body-info-text">
+            Stay informed on the latest trending ML papers with code, research developments, libraries, methods, and datasets.<br><br>
+            <a href="https://paperswithcode.com/newsletter">Read previous issues</a>
+          </div>
+
+          <input type="hidden" name="csrfmiddlewaretoken" value="gHOtzNWhtnpaCO7S1ooe1hz4I5DdPbgONVqJz4ePrlTL3vGWd0ANrJMYMu1aWMjB">
+          <input placeholder="Enter your email" type="email" class="form-control pwc-email" name="address" id="id_address" max_length="100" required="">
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Subscribe</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Login -->
+<div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="loginModalLabel">Join the community</h5>
+        <button type="button" class="close btn-close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="login-modal-message">
+        You need to <a href="https://paperswithcode.com/accounts/login?next=/method/gsde">log in</a> to edit.<br>
+        You can <a href="https://paperswithcode.com/accounts/register?next=/method/gsde">create a new account</a> if you don't have one.<br><br>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+    <!-- Edit Method -->
+    <div class="modal fade" id="editMethod" role="dialog" aria-labelledby="editMethodLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editMethodLabel">Edit Method</h5>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="opacity: 0;">
+                    <form action="https://paperswithcode.com/method/gsde" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="gHOtzNWhtnpaCO7S1ooe1hz4I5DdPbgONVqJz4ePrlTL3vGWd0ANrJMYMu1aWMjB">
+                        
+
+
+    
+    <div id="div_id_name" class="form-group">
+        
+            <label for="id_name" class=" requiredField">
+                Method Name:<span class="asteriskField">*</span>
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <input type="text" name="name" value="gSDE" maxlength="200" class="textinput textInput form-control" required="" id="id_name">
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                        
+
+
+    
+    <div id="div_id_full_name" class="form-group">
+        
+            <label for="id_full_name" class=" requiredField">
+                Method Full Name:<span class="asteriskField">*</span>
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <input type="text" name="full_name" value="Generalized State-Dependent Exploration" maxlength="200" class="textinput textInput form-control" required="" id="id_full_name">
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                        
+
+
+    
+    <div id="div_id_description" class="form-group">
+        
+            <label for="id_description" class="">
+                Description with Markdown (optional):
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <textarea name="description" cols="40" rows="12" class="textarea form-control" id="id_description">**Generalized State-Dependent Exploration**, or **gSDE**, is an exploration method for reinforcement learning that uses more general features and re-sampling the noise periodically. 
+
+State-Dependent Exploration (SDE) is an intermediate solution for exploration that consists in adding noise as a function of the state $s\_{t}$, to the deterministic action $\mu\left(\mathbf{s}\_{t}\right)$. At the beginning of an episode, the parameters $\theta\_{\epsilon}$ of that exploration function are drawn from a Gaussian distribution. The resulting action $\mathbf{a}\_{t}$ is as follows:
+
+$$
+\mathbf{a}\_{t}=\mu\left(\mathbf{s}\_{t} ; \theta\_{\mu}\right)+\epsilon\left(\mathbf{s}\_{t} ; \theta\_{\epsilon}\right), \quad \theta\_{\epsilon} \sim \mathcal{N}\left(0, \sigma^{2}\right)
+$$
+
+This episode-based exploration is smoother and more consistent than the unstructured step-based exploration. Thus, during one episode, instead of oscillating around a mean value, the action a for a given state $s$ will be the same.
+
+In the case of a linear exploration function $\epsilon\left(\mathbf{s} ; \theta\_{\epsilon}\right)=\theta\_{\epsilon} \mathbf{s}$, by operation on Gaussian distributions, Rückstieß et al. show that the action element $\mathbf{a}\_{j}$ is normally distributed:
+
+$$
+\pi]_{j}\left(\mathbf{a}\_{j} \mid \mathbf{s}\right) \sim \mathcal{N}\left(\mu\_{j}(\mathbf{s}), \hat{\sigma\_{j}}^{2}\right)
+$$
+
+where $\hat{\sigma}$ is a diagonal matrix with elements $\hat{\sigma}\_{j}=\sqrt{\sum\_{i}\left(\sigma\_{i j} \mathbf{s}\_{i}\right)^{2}}$.
+
+Because we know the policy distribution, we can obtain the derivative of the log-likelihood $\log \pi(\mathbf{a} \mid \mathbf{s})$ with respect to the variance $\sigma$ :
+
+$$
+\frac{\partial \log \pi(\mathbf{a} \mid \mathbf{s})}{\partial \sigma_{i j}}=\frac{\left(\mathbf{a}\_{j}-\mu\_{j}\right)^{2}-\hat{\sigma\_{j}}^{2}}{\hat{\sigma}\_{j}^{3}} \frac{\mathbf{s}\_{i}^{2} \sigma\_{i j}}{\hat{\sigma_{j}}}
+$$
+
+This can be easily plugged into the likelihood ratio gradient estimator, which allows to adapt $\sigma$ during training. SDE is therefore compatible with standard policy gradient methods, while addressing most shortcomings of the unstructured exploration.
+
+For gSDE, two improvements are suggested:
+
+1. We sample the parameters $\theta\_{\epsilon}$ of the exploration function every $n$ steps instead of every episode.
+2. Instead of the state s, we can in fact use any features. We chose policy features $\mathbf{z}\_{\mu}\left(\mathbf{s} ; \theta\_{\mathbf{z}\_{\mu}}\right)$ (last layer before the deterministic output $\left.\mu(\mathbf{s})=\theta\_{\mu} \mathbf{z}\_{\mu}\left(\mathbf{s} ; \theta_{\mathbf{z}\_{\mu}}\right)\right)$ as input to the noise function $\epsilon\left(\mathbf{s} ; \theta\_{\epsilon}\right)=\theta\_{\epsilon} \mathbf{z}\_{\mu}(\mathbf{s})$</textarea>
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                        
+
+
+    
+    <div id="div_id_code_snippet_url" class="form-group">
+        
+            <label for="id_code_snippet_url" class="">
+                Code Snippet URL (optional):
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <input type="text" name="code_snippet_url" maxlength="200" class="textinput textInput form-control" id="id_code_snippet_url">
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                        
+
+
+    
+    <div id="div_id_image" class="form-group">
+        
+            <label for="id_image" class="">
+                Image
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        Currently: <a href="./gSDE Explained _ Papers With Code_files/43efe733-bf41-4ee8-bedb-5087294e0d89.png">methods/43efe733-bf41-4ee8-bedb-5087294e0d89.png</a>
+<input type="checkbox" name="image-clear" id="image-clear_id">
+<label for="image-clear_id">Clear</label><br>
+Change:
+<input type="file" name="image" accept="image/*" class="clearablefileinput form-control-file" id="id_image">
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">
+                                Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Collection -->
+    <div class="modal fade" id="addCollection" role="dialog" aria-labelledby="addCollectionLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCollectionLabel">Add A Method Collection</h5>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="opacity: 0;">
+                    
+                        <div class="current-tasks-title">Attached collections:</div>
+                    
+                    
+                        <ul class="list-unstyled">
+                            <li>
+                                <a href="https://paperswithcode.com/methods/category/exploration-strategies">
+                                    <span class="badge badge-primary">EXPLORATION STRATEGIES</span>
+                                </a>
+                            </li>
+                        </ul>
+                    
+                    <form action="https://paperswithcode.com/method/gsde" method="post">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="gHOtzNWhtnpaCO7S1ooe1hz4I5DdPbgONVqJz4ePrlTL3vGWd0ANrJMYMu1aWMjB">
+                        
+
+
+    
+    <div id="div_id_collection" class="form-group">
+        
+            <label for="id_collection" class="">
+                Add:
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <select name="collection" class="modelselect2 form-control" id="id_collection" data-autocomplete-light-language="en" data-autocomplete-light-url="/method-collection-autocomplete/" data-autocomplete-light-function="select2">
+  <option value="" selected="">---------</option>
+
+</select>
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+
+                        <div class="modal-help-text">
+                            Not in the list?<br>
+                            <a href="https://paperswithcode.com/method/gsde#" id="show-new-collection-form-hidden">
+                            <span class=" icon-wrapper icon-ion" data-name="add"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M256 112v288m144-144H112"></path></svg></span>
+                                Create a new collection</a>.
+                        </div>
+
+                        <div class="new-collection-form-hidden">
+                            
+
+
+    
+    <div id="div_id_new_collection_name" class="form-group">
+        
+            <label for="id_new_collection_name" class="">
+                New collection name:
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <input type="text" name="new_collection_name" maxlength="200" class="textinput textInput form-control" id="id_new_collection_name">
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                            
+
+
+    
+    <div id="div_id_new_collection_area" class="form-group">
+        
+            <label for="id_new_collection_area" class="">
+                Top-level area:
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <select name="new_collection_area" class="select form-control" id="id_new_collection_area">
+  <option value="" selected="">---------</option>
+
+  <option value="7">Audio</option>
+
+  <option value="1">Computer Vision</option>
+
+  <option value="3">General</option>
+
+  <option value="4">Graphs</option>
+
+  <option value="2">Natural Language Processing</option>
+
+  <option value="5">Reinforcement Learning</option>
+
+  <option value="6">Sequential</option>
+
+</select>
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                            
+
+
+    
+    <div id="div_id_new_collection_parent" class="form-group">
+        
+            <label for="id_new_collection_parent" class="">
+                Parent collection (if any):
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <select name="new_collection_parent" class="modelselect2 form-control" id="id_new_collection_parent" data-autocomplete-light-language="en" data-autocomplete-light-url="/method-collection-autocomplete/" data-autocomplete-light-function="select2">
+  <option value="" selected="">---------</option>
+
+</select>
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                            
+
+
+    
+    <div id="div_id_new_collection_desc" class="form-group">
+        
+            <label for="id_new_collection_desc" class="">
+                Description (optional):
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <textarea name="new_collection_desc" cols="40" rows="3" class="textarea form-control" id="id_new_collection_desc"></textarea>
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">
+                                Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remove Collection -->
+    <div class="modal fade" id="removeCollection" tabindex="-1" role="dialog" aria-labelledby="removeCollectionLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="removeCollectionLabel">Remove a
+                        collection</h5>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <form action="https://paperswithcode.com/method/gsde" method="post">
+                    <div class="modal-body" style="opacity: 0;">
+                        
+                            <ul class="list-unstyled">
+                                
+                                    <li>
+                                        <a href="https://paperswithcode.com/methods/category/exploration-strategies">
+                                            <span class="badge badge-primary">EXPLORATION STRATEGIES</span>
+                                        </a>
+                                        <input type="hidden" name="csrfmiddlewaretoken" value="gHOtzNWhtnpaCO7S1ooe1hz4I5DdPbgONVqJz4ePrlTL3vGWd0ANrJMYMu1aWMjB">
+                                        <input type="hidden" name="remove_collection_pk" value="340">
+                                        <button type="submit" class="btn btn-danger" style="width:2.5em">-
+                                        </button>
+                                    </li>
+                                
+                            </ul>
+                        
+                    </div></form>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Component -->
+    <div class="modal fade" id="addComponent" role="dialog" aria-labelledby="addComponentLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addComponentLabel">Add A Method Component</h5>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body" style="opacity: 0;">
+                    
+                    
+                    <form action="https://paperswithcode.com/method/gsde" method="post">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="gHOtzNWhtnpaCO7S1ooe1hz4I5DdPbgONVqJz4ePrlTL3vGWd0ANrJMYMu1aWMjB">
+                        
+
+
+    
+    <div id="div_id_dependency" class="form-group">
+        
+            <label for="id_dependency" class=" requiredField">
+                Add:<span class="asteriskField">*</span>
+            </label>
+        
+
+        
+
+        
+
+        
+            
+                <div class="">
+                    
+                        <select name="dependency" class="modelselect2 form-control" required="" id="id_dependency" data-autocomplete-light-language="en" data-autocomplete-light-url="/method-autocomplete/" data-autocomplete-light-function="select2">
+  <option value="" selected="">---------</option>
+
+</select>
+                    
+                    
+
+
+    
+
+
+
+
+    
+
+
+
+                </div>
+            
+        
+    </div>
+    
+
+
+                        
+
+
+    
+        <div class="form-group">
+        
+    
+    <div id="div_id_optional" class="form-check">
+        
+
+        
+
+        
+
+        
+            
+                
+                    <input type="checkbox" name="optional" class="checkboxinput form-check-input" id="id_optional">
+                
+                <label for="id_optional" class="form-check-label">
+                    Tick if this dependency is optional
+                </label>
+                
+
+
+    
+
+
+
+
+    
+
+
+
+            
+        
+    </div>
+    
+        
+        </div>
+    
+
+
+
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">
+                                Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remove Component -->
+    <div class="modal fade" id="removeComponent" tabindex="-1" role="dialog" aria-labelledby="removeComponentLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="removeCompoenntnLabel">Remove a
+                        method component</h5>
+                    <button type="button" class="close btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <form action="https://paperswithcode.com/method/gsde" method="post">
+                    <div class="modal-body" style="opacity: 0;">
+                        
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+<div class="container content content-buffer ">
+
+  
+    <div class="mobile-width">
+
+    <div class="method-header">
+    
+        <a href="https://paperswithcode.com/methods/category/exploration-strategies">
+            <span class="badge badge-primary">
+                
+                    <img src="./gSDE Explained _ Papers With Code_files/default.gif">
+                
+            <span>Exploration Strategies</span>
+            </span>
+        </a>
+    
+
+    <div class="method-title">
+        <div class="row">
+
+            <div class="col-md-11" style="
+    color: greenyellow;
+">
+                <h1>Generalized State-Dependent Exploration</h1>
+
+                
+                    <span class="method-subtitle">Introduced by Raffin et al. in <a href="https://paperswithcode.com/paper/generalized-state-dependent-exploration-for">Smooth Exploration for Robotic Reinforcement Learning</a></span>
+                
+            </div>
+        <div class="col-md-1">
+            <div class="float-right">&nbsp;
+                <div class="dropdown edit-button">
+                    <a data-bs-toggle="modal" data-bs-target="#loginModal">
+                        <span class="badge badge-method-edit" style="padding-top:10px;"><span class=" icon-wrapper icon-fa icon-fa-solid" data-name="edit"><svg viewBox="0 0 576 514.999" xmlns="http://www.w3.org/2000/svg"><path d="M402.6 85.198l90.2 90.2c3.8 3.8 3.8 10 0 13.8l-218.399 218.4-92.8 10.3c-12.4 1.4-22.9-9.1-21.5-21.5l10.3-92.8 218.4-218.4c3.799-3.8 10-3.8 13.799 0zm162-22.9c15.2 15.2 15.2 39.9 0 55.2l-35.4 35.4c-3.8 3.8-10 3.8-13.8 0l-90.2-90.2c-3.8-3.8-3.8-10 0-13.8l35.4-35.4c15.3-15.2 40-15.2 55.2 0zM384 348.198c0-3.2 1.3-6.2 3.5-8.5l40-40c7.6-7.5 20.5-2.2 20.5 8.5v157.8c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48v-352c0-26.5 21.5-48 48-48h285.8c10.7 0 16.1 12.9 8.5 20.5l-40 40c-2.3 2.2-5.3 3.5-8.5 3.5H64v320h320v-101.8z"></path></svg></span> Edit</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        </div>
+    </div>
+
+    <div class="method-content" style="margin-top: 2rem;">
+
+        <div class="row">
+            <div class="col-md-8 description">
+                <p style="
+    color: greenyellow;
+"><strong>Generalized State-Dependent Exploration</strong>, or <strong>gSDE</strong>, is an exploration method for reinforcement learning that uses more general features and re-sampling the noise periodically. </p>
+<p style="
+    color: greenyellow;
+">State-Dependent Exploration (SDE) is an intermediate solution for exploration that consists in adding noise as a function of the state <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="0" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D460 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D461 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mi>s</mi><mrow><mi>t</mi></mrow></msub></math></mjx-assistive-mml></mjx-container>, to the deterministic action <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="1" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D461 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>μ</mi><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><msub><mrow><mi mathvariant="bold">s</mi></mrow><mrow><mi>t</mi></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow></math></mjx-assistive-mml></mjx-container>. At the beginning of an episode, the parameters <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="2" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub></math></mjx-assistive-mml></mjx-container> of that exploration function are drawn from a Gaussian distribution. The resulting action <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="3" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D41A TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D461 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mrow><mi mathvariant="bold">a</mi></mrow><mrow><mi>t</mi></mrow></msub></math></mjx-assistive-mml></mjx-container> is as follows:</p>
+<p><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" display="true" role="presentation" tabindex="0" ctxtmenu_counter="4" style="font-size: 114.5%; position: relative;"><mjx-math display="true" class="MJX-TEX" aria-hidden="true" style="margin-left: 0px; margin-right: 0px;"><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D41A TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D461 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c3D"></mjx-c></mjx-mo><mjx-mi class="mjx-i" space="4"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D461 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c3B"></mjx-c></mjx-mo><mjx-msub space="2"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow><mjx-mo class="mjx-n" space="3"><mjx-c class="mjx-c2B"></mjx-c></mjx-mo><mjx-mi class="mjx-i" space="3"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D461 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c3B"></mjx-c></mjx-mo><mjx-msub space="2"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c2C"></mjx-c></mjx-mo><mjx-mstyle space="2"><mjx-mspace style="width: 1em;"></mjx-mspace></mjx-mstyle><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c223C"></mjx-c></mjx-mo><mjx-texatom space="4" texclass="ORD"><mjx-mi class="mjx-cal mjx-i"><mjx-c class="mjx-c4E TEX-C"></mjx-c></mjx-mi></mjx-texatom><mjx-mrow><mjx-mo class="mjx-sop"><mjx-c class="mjx-c28 TEX-S1"></mjx-c></mjx-mo><mjx-mn class="mjx-n"><mjx-c class="mjx-c30"></mjx-c></mjx-mn><mjx-mo class="mjx-n"><mjx-c class="mjx-c2C"></mjx-c></mjx-mo><mjx-msup space="2"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: 0.413em;"><mjx-texatom size="s" texclass="ORD"><mjx-mn class="mjx-n"><mjx-c class="mjx-c32"></mjx-c></mjx-mn></mjx-texatom></mjx-script></mjx-msup><mjx-mo class="mjx-sop"><mjx-c class="mjx-c29 TEX-S1"></mjx-c></mjx-mo></mjx-mrow></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="block"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><msub><mrow><mi mathvariant="bold">a</mi></mrow><mrow><mi>t</mi></mrow></msub><mo>=</mo><mi>μ</mi><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><msub><mrow><mi mathvariant="bold">s</mi></mrow><mrow><mi>t</mi></mrow></msub><mo>;</mo><msub><mi>θ</mi><mrow><mi>μ</mi></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow><mo>+</mo><mi>ϵ</mi><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><msub><mrow><mi mathvariant="bold">s</mi></mrow><mrow><mi>t</mi></mrow></msub><mo>;</mo><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow><mo>,</mo><mstyle scriptlevel="0"><mspace width="1em"></mspace></mstyle><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub><mo>∼</mo><mrow><mi data-mjx-variant="-tex-calligraphic" mathvariant="script">N</mi></mrow><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><mn>0</mn><mo>,</mo><msup><mi>σ</mi><mrow><mn>2</mn></mrow></msup><mo data-mjx-texclass="CLOSE">)</mo></mrow></math></mjx-assistive-mml></mjx-container></p>
+<p style="
+    color: greenyellow;
+">This episode-based exploration is smoother and more consistent than the unstructured step-based exploration. Thus, during one episode, instead of oscillating around a mean value, the action a for a given state <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="5" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D460 TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>s</mi></math></mjx-assistive-mml></mjx-container> will be the same.</p>
+<p>In the case of a linear exploration function <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="6" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c3B"></mjx-c></mjx-mo><mjx-msub space="2"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c3D"></mjx-c></mjx-mo><mjx-msub space="4"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>ϵ</mi><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo>;</mo><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow><mo>=</mo><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub><mrow><mi mathvariant="bold">s</mi></mrow></math></mjx-assistive-mml></mjx-container>, by operation on Gaussian distributions, Rückstieß et al. show that the action element <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="7" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D41A TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mrow><mi mathvariant="bold">a</mi></mrow><mrow><mi>j</mi></mrow></msub></math></mjx-assistive-mml></mjx-container> is normally distributed:</p>
+<p><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" display="true" role="presentation" tabindex="0" ctxtmenu_counter="8" style="font-size: 114.5%; position: relative;"><mjx-math display="true" class="MJX-TEX" aria-hidden="true" style="margin-left: 0px; margin-right: 0px;"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70B TEX-I"></mjx-c></mjx-mi><mjx-msub><mjx-mo class="mjx-n" noic="true"><mjx-c class="mjx-c5D"></mjx-c></mjx-mo><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D41A TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c2223"></mjx-c></mjx-mo><mjx-texatom space="4" texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c223C"></mjx-c></mjx-mo><mjx-texatom space="4" texclass="ORD"><mjx-mi class="mjx-cal mjx-i"><mjx-c class="mjx-c4E TEX-C"></mjx-c></mjx-mi></mjx-texatom><mjx-mrow><mjx-mo class="mjx-lop"><mjx-c class="mjx-c28 TEX-S2"></mjx-c></mjx-mo><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo><mjx-mo class="mjx-n"><mjx-c class="mjx-c2C"></mjx-c></mjx-mo><mjx-msup space="2"><mjx-texatom texclass="ORD"><mjx-mover><mjx-over style="padding-bottom: 0.06em; padding-left: 0.206em; margin-bottom: -0.531em;"><mjx-mo class="mjx-n"><mjx-c class="mjx-c5E"></mjx-c></mjx-mo></mjx-over><mjx-base><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-base></mjx-mover></mjx-texatom><mjx-script style="vertical-align: 0.481em;"><mjx-texatom size="s" texclass="ORD"><mjx-mn class="mjx-n"><mjx-c class="mjx-c32"></mjx-c></mjx-mn></mjx-texatom></mjx-script></mjx-msup><mjx-mo class="mjx-lop"><mjx-c class="mjx-c29 TEX-S2"></mjx-c></mjx-mo></mjx-mrow></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="block"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>π</mi><msub><mo stretchy="false">]</mo><mrow><mi>j</mi></mrow></msub><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><msub><mrow><mi mathvariant="bold">a</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>∣</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo data-mjx-texclass="CLOSE">)</mo></mrow><mo>∼</mo><mrow><mi data-mjx-variant="-tex-calligraphic" mathvariant="script">N</mi></mrow><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><msub><mi>μ</mi><mrow><mi>j</mi></mrow></msub><mo stretchy="false">(</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo stretchy="false">)</mo><mo>,</mo><msup><mrow><mover><msub><mi>σ</mi><mrow><mi>j</mi></mrow></msub><mo stretchy="false">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msup><mo data-mjx-texclass="CLOSE">)</mo></mrow></math></mjx-assistive-mml></mjx-container></p>
+<p>where <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="9" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-texatom texclass="ORD"><mjx-mover><mjx-over style="padding-bottom: 0.06em; padding-left: 0.035em; margin-bottom: -0.531em;"><mjx-mo class="mjx-n"><mjx-c class="mjx-c5E"></mjx-c></mjx-mo></mjx-over><mjx-base><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi></mjx-base></mjx-mover></mjx-texatom></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mrow><mover><mi>σ</mi><mo stretchy="false">^</mo></mover></mrow></math></mjx-assistive-mml></mjx-container> is a diagonal matrix with elements <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="10" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-texatom texclass="ORD"><mjx-mover><mjx-over style="padding-bottom: 0.06em; padding-left: 0.035em; margin-bottom: -0.531em;"><mjx-mo class="mjx-n"><mjx-c class="mjx-c5E"></mjx-c></mjx-mo></mjx-over><mjx-base><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi></mjx-base></mjx-mover></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c3D"></mjx-c></mjx-mo><mjx-msqrt space="4"><mjx-sqrt><mjx-surd><mjx-mo class="mjx-lop"><mjx-c class="mjx-c221A TEX-S2"></mjx-c></mjx-mo></mjx-surd><mjx-box style="padding-top: 0.286em;"><mjx-munder limits="false"><mjx-mo class="mjx-sop"><mjx-c class="mjx-c2211 TEX-S1"></mjx-c></mjx-mo><mjx-script style="vertical-align: -0.285em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D456 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-munder><mjx-msup space="2"><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D456 TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D456 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow><mjx-script style="vertical-align: 0.477em;"><mjx-texatom size="s" texclass="ORD"><mjx-mn class="mjx-n"><mjx-c class="mjx-c32"></mjx-c></mjx-mn></mjx-texatom></mjx-script></mjx-msup></mjx-box></mjx-sqrt></mjx-msqrt></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mrow><mover><mi>σ</mi><mo stretchy="false">^</mo></mover></mrow><mrow><mi>j</mi></mrow></msub><mo>=</mo><msqrt><munder><mo data-mjx-texclass="OP">∑</mo><mrow><mi>i</mi></mrow></munder><msup><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><msub><mrow><mi mathvariant="bold">s</mi></mrow><mrow><mi>i</mi></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow><mrow><mn>2</mn></mrow></msup></msqrt></math></mjx-assistive-mml></mjx-container>.</p>
+<p>Because we know the policy distribution, we can obtain the derivative of the log-likelihood <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="11" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-n"><mjx-c class="mjx-c6C"></mjx-c><mjx-c class="mjx-c6F"></mjx-c><mjx-c class="mjx-c67"></mjx-c></mjx-mi><mjx-mo class="mjx-n"><mjx-c class="mjx-c2061"></mjx-c></mjx-mo><mjx-mi class="mjx-i" space="2"><mjx-c class="mjx-c1D70B TEX-I"></mjx-c></mjx-mi><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D41A TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c2223"></mjx-c></mjx-mo><mjx-texatom space="4" texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>log</mi><mo data-mjx-texclass="NONE">⁡</mo><mi>π</mi><mo stretchy="false">(</mo><mrow><mi mathvariant="bold">a</mi></mrow><mo>∣</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo stretchy="false">)</mo></math></mjx-assistive-mml></mjx-container> with respect to the variance <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="12" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>σ</mi></math></mjx-assistive-mml></mjx-container> :</p>
+<p><mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" display="true" role="presentation" tabindex="0" ctxtmenu_counter="13" style="font-size: 114.5%; position: relative;"><mjx-math display="true" class="MJX-TEX" aria-hidden="true" style="margin-left: 0px; margin-right: 0px;"><mjx-mfrac><mjx-frac type="d"><mjx-num><mjx-nstrut type="d"></mjx-nstrut><mjx-mrow><mjx-mi class="mjx-n"><mjx-c class="mjx-c2202"></mjx-c></mjx-mi><mjx-mi class="mjx-n" space="2"><mjx-c class="mjx-c6C"></mjx-c><mjx-c class="mjx-c6F"></mjx-c><mjx-c class="mjx-c67"></mjx-c></mjx-mi><mjx-mo class="mjx-n"><mjx-c class="mjx-c2061"></mjx-c></mjx-mo><mjx-mi class="mjx-i" space="2"><mjx-c class="mjx-c1D70B TEX-I"></mjx-c></mjx-mi><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D41A TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c2223"></mjx-c></mjx-mo><mjx-texatom space="4" texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow></mjx-num><mjx-dbox><mjx-dtable><mjx-line type="d"></mjx-line><mjx-row><mjx-den><mjx-dstrut type="d"></mjx-dstrut><mjx-mrow><mjx-mi class="mjx-n"><mjx-c class="mjx-c2202"></mjx-c></mjx-mi><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D456 TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-mrow></mjx-den></mjx-row></mjx-dtable></mjx-dbox></mjx-frac></mjx-mfrac><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c3D"></mjx-c></mjx-mo><mjx-mfrac space="4"><mjx-frac type="d"><mjx-num><mjx-nstrut type="d"></mjx-nstrut><mjx-mrow><mjx-msup><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D41A TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n" space="3"><mjx-c class="mjx-c2212"></mjx-c></mjx-mo><mjx-msub space="3"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow><mjx-script style="vertical-align: 0.477em;"><mjx-texatom size="s" texclass="ORD"><mjx-mn class="mjx-n"><mjx-c class="mjx-c32"></mjx-c></mjx-mn></mjx-texatom></mjx-script></mjx-msup><mjx-mo class="mjx-n" space="3"><mjx-c class="mjx-c2212"></mjx-c></mjx-mo><mjx-msup space="3"><mjx-texatom texclass="ORD"><mjx-mover><mjx-over style="padding-bottom: 0.06em; padding-left: 0.206em; margin-bottom: -0.531em;"><mjx-mo class="mjx-n"><mjx-c class="mjx-c5E"></mjx-c></mjx-mo></mjx-over><mjx-base><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-base></mjx-mover></mjx-texatom><mjx-script style="vertical-align: 0.481em;"><mjx-texatom size="s" texclass="ORD"><mjx-mn class="mjx-n"><mjx-c class="mjx-c32"></mjx-c></mjx-mn></mjx-texatom></mjx-script></mjx-msup></mjx-mrow></mjx-num><mjx-dbox><mjx-dtable><mjx-line type="d"></mjx-line><mjx-row><mjx-den><mjx-dstrut type="d"></mjx-dstrut><mjx-msubsup><mjx-texatom texclass="ORD"><mjx-mover><mjx-over style="padding-bottom: 0.06em; padding-left: 0.035em; margin-bottom: -0.531em;"><mjx-mo class="mjx-n"><mjx-c class="mjx-c5E"></mjx-c></mjx-mo></mjx-over><mjx-base><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi></mjx-base></mjx-mover></mjx-texatom><mjx-script style="vertical-align: -0.247em;"><mjx-texatom size="s" texclass="ORD"><mjx-mn class="mjx-n"><mjx-c class="mjx-c33"></mjx-c></mjx-mn></mjx-texatom><mjx-spacer style="margin-top: 0.245em;"></mjx-spacer><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msubsup></mjx-den></mjx-row></mjx-dtable></mjx-dbox></mjx-frac></mjx-mfrac><mjx-mfrac><mjx-frac type="d"><mjx-num><mjx-nstrut type="d"></mjx-nstrut><mjx-mrow><mjx-msubsup><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.284em;"><mjx-texatom size="s" texclass="ORD"><mjx-mn class="mjx-n"><mjx-c class="mjx-c32"></mjx-c></mjx-mn></mjx-texatom><mjx-spacer style="margin-top: 0.18em;"></mjx-spacer><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D456 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msubsup><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D456 TEX-I"></mjx-c></mjx-mi><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-mrow></mjx-num><mjx-dbox><mjx-dtable><mjx-line type="d"></mjx-line><mjx-row><mjx-den><mjx-dstrut type="d"></mjx-dstrut><mjx-texatom texclass="ORD"><mjx-mover><mjx-over style="padding-bottom: 0.06em; padding-left: 0.206em; margin-bottom: -0.531em;"><mjx-mo class="mjx-n"><mjx-c class="mjx-c5E"></mjx-c></mjx-mo></mjx-over><mjx-base><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D457 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-base></mjx-mover></mjx-texatom></mjx-den></mjx-row></mjx-dtable></mjx-dbox></mjx-frac></mjx-mfrac></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="block"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mfrac><mrow><mi mathvariant="normal">∂</mi><mi>log</mi><mo data-mjx-texclass="NONE">⁡</mo><mi>π</mi><mo stretchy="false">(</mo><mrow><mi mathvariant="bold">a</mi></mrow><mo>∣</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo stretchy="false">)</mo></mrow><mrow><mi mathvariant="normal">∂</mi><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow></mfrac><mo>=</mo><mfrac><mrow><msup><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><msub><mrow><mi mathvariant="bold">a</mi></mrow><mrow><mi>j</mi></mrow></msub><mo>−</mo><msub><mi>μ</mi><mrow><mi>j</mi></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow><mrow><mn>2</mn></mrow></msup><mo>−</mo><msup><mrow><mover><msub><mi>σ</mi><mrow><mi>j</mi></mrow></msub><mo stretchy="false">^</mo></mover></mrow><mrow><mn>2</mn></mrow></msup></mrow><msubsup><mrow><mover><mi>σ</mi><mo stretchy="false">^</mo></mover></mrow><mrow><mi>j</mi></mrow><mrow><mn>3</mn></mrow></msubsup></mfrac><mfrac><mrow><msubsup><mrow><mi mathvariant="bold">s</mi></mrow><mrow><mi>i</mi></mrow><mrow><mn>2</mn></mrow></msubsup><msub><mi>σ</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub></mrow><mrow><mover><msub><mi>σ</mi><mrow><mi>j</mi></mrow></msub><mo stretchy="false">^</mo></mover></mrow></mfrac></math></mjx-assistive-mml></mjx-container></p>
+<p style="
+    color: greenyellow;
+">This can be easily plugged into the likelihood ratio gradient estimator, which allows to adapt <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="14" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D70E TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>σ</mi></math></mjx-assistive-mml></mjx-container> during training. SDE is therefore compatible with standard policy gradient methods, while addressing most shortcomings of the unstructured exploration.</p>
+<p>For gSDE, two improvements are suggested:</p>
+<ol>
+<li>We sample the parameters <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="15" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub></math></mjx-assistive-mml></mjx-container> of the exploration function every <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="16" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D45B TEX-I"></mjx-c></mjx-mi></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>n</mi></math></mjx-assistive-mml></mjx-container> steps instead of every episode.</li>
+<li>Instead of the state s, we can in fact use any features. We chose policy features <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="17" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D433 TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mrow><mjx-mo class="mjx-sop"><mjx-c class="mjx-c28 TEX-S1"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c3B"></mjx-c></mjx-mo><mjx-msub space="2"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D433 TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-sop"><mjx-c class="mjx-c29 TEX-S1"></mjx-c></mjx-mo></mjx-mrow></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><msub><mrow><mi mathvariant="bold">z</mi></mrow><mrow><mi>μ</mi></mrow></msub><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo>;</mo><msub><mi>θ</mi><mrow><msub><mrow><mi mathvariant="bold">z</mi></mrow><mrow><mi>μ</mi></mrow></msub></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow></math></mjx-assistive-mml></mjx-container> (last layer before the deterministic output <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="18" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mrow><mjx-mo class="mjx-n"></mjx-mo><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c3D"></mjx-c></mjx-mo><mjx-msub space="4"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D433 TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mrow><mjx-mo class="mjx-sop"><mjx-c class="mjx-c28 TEX-S1"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c3B"></mjx-c></mjx-mo><mjx-msub space="2"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D433 TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-sop"><mjx-c class="mjx-c29 TEX-S1"></mjx-c></mjx-mo></mjx-mrow><mjx-mo class="mjx-sop"><mjx-c class="mjx-c29 TEX-S1"></mjx-c></mjx-mo></mjx-mrow></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN" fence="true" stretchy="true" symmetric="true"></mo><mi>μ</mi><mo stretchy="false">(</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo stretchy="false">)</mo><mo>=</mo><msub><mi>θ</mi><mrow><mi>μ</mi></mrow></msub><msub><mrow><mi mathvariant="bold">z</mi></mrow><mrow><mi>μ</mi></mrow></msub><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo>;</mo><msub><mi>θ</mi><mrow><msub><mrow><mi mathvariant="bold">z</mi></mrow><mrow><mi>μ</mi></mrow></msub></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow><mo data-mjx-texclass="CLOSE">)</mo></mrow></math></mjx-assistive-mml></mjx-container> as input to the noise function <mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" role="presentation" tabindex="0" ctxtmenu_counter="19" style="font-size: 114.5%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi><mjx-mrow><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c3B"></mjx-c></mjx-mo><mjx-msub space="2"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-mrow><mjx-mo class="mjx-n" space="4"><mjx-c class="mjx-c3D"></mjx-c></mjx-mo><mjx-msub space="4"><mjx-mi class="mjx-i" noic="true"><mjx-c class="mjx-c1D703 TEX-I"></mjx-c></mjx-mi><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D716 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-msub><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b" noic="true"><mjx-c class="mjx-c1D433 TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-script style="vertical-align: -0.15em;"><mjx-texatom size="s" texclass="ORD"><mjx-mi class="mjx-i"><mjx-c class="mjx-c1D707 TEX-I"></mjx-c></mjx-mi></mjx-texatom></mjx-script></mjx-msub><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-texatom texclass="ORD"><mjx-mi class="mjx-b"><mjx-c class="mjx-c1D42C TEX-B"></mjx-c></mjx-mi></mjx-texatom><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-math><mjx-assistive-mml role="presentation" unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>ϵ</mi><mrow data-mjx-texclass="INNER"><mo data-mjx-texclass="OPEN">(</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo>;</mo><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub><mo data-mjx-texclass="CLOSE">)</mo></mrow><mo>=</mo><msub><mi>θ</mi><mrow><mi>ϵ</mi></mrow></msub><msub><mrow><mi mathvariant="bold">z</mi></mrow><mrow><mi>μ</mi></mrow></msub><mo stretchy="false">(</mo><mrow><mi mathvariant="bold">s</mi></mrow><mo stretchy="false">)</mo></math></mjx-assistive-mml></mjx-container></li>
+</ol>
+                
+                    <span class="description-source">
+                        Source: <a href="https://arxiv.org/abs/2005.05719v2"><span class=" icon-wrapper icon-ion" data-name="document-outline"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path d="M416 221.25V416a48 48 0 0 1-48 48H144a48 48 0 0 1-48-48V96a48 48 0 0 1 48-48h98.75a32 32 0 0 1 22.62 9.37l141.26 141.26a32 32 0 0 1 9.37 22.62z" fill="none" stroke="#000" stroke-linejoin="round" stroke-width="32"></path><path d="M256 56v120a32 32 0 0 0 32 32h120" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"></path></svg></span> Smooth Exploration for Robotic Reinforcement Learning</a>
+                    </span>
+
+            
+            <div class="context">
+                <div class="row">
+                    <div class="col-md-12">
+                        
+                        <a href="https://arxiv.org/abs/2005.05719v2" onclick="captureOutboundLink(&#39;https://arxiv.org/abs/2005.05719v2&#39;); return true;" class="badge badge-light">
+                            Read Paper
+                        </a>
+                        
+                        
+                            <a href="https://paperswithcode.com/paper/generalized-state-dependent-exploration-for#code" class="badge badge-light">
+                                See Code
+                            </a>
+                        
+                    </div>
+                </div>
+            </div>
+            
+
+
+                
+            </div>
+            <div class="col-md-4">
+                <a href="https://paperswithcode.com/method/gsde#" id="pop">
+                    
+                      </a><a href="./gSDE Explained _ Papers With Code_files/43efe733-bf41-4ee8-bedb-5087294e0d89.png" data-lightbox="imageresource">
+                        <img id="imageresource" width="100%" src="./gSDE Explained _ Papers With Code_files/43efe733-bf41-4ee8-bedb-5087294e0d89.png">
+                      </a>
+                      
+                
+                <div class="modal fade" id="imagemodal" tabindex="-1" role="dialog" aria-labelledby="imagePreview" aria-hidden="true">
+                  <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                      <div class="modal-body text-center" style="opacity: 0;">
+                        <img class="method-image" src="https://paperswithcode.com/method/gsde" id="imagepreview" style="max-width: 750px;">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="papers">
+            <h4 style="margin-bottom: 0.5rem">Papers</h4>
+            <hr>
+
+            
+
+<div class="sota-table-preview papers-datatable-component">
+  <div id="datatable-papers_wrapper" class="dataTables_wrapper dt-bootstrap4 no-footer"><div id="datatable-papers_filter" class="dataTables_filter"><label><input type="search" class="form-control form-control-sm" placeholder="Search for a paper or author" aria-controls="datatable-papers"></label></div><table style="width: 100%;" id="datatable-papers" class="table-striped table-responsive dataTable no-footer" aria-describedby="datatable-papers_info">
+      <thead style="width: 100% !important;">
+          <tr><th style="width: 687px;" class="sorting" tabindex="0" aria-controls="datatable-papers" rowspan="1" colspan="1" aria-label="Paper: activate to sort column ascending"><span>Paper</span></th><th class="text-center sorting" tabindex="0" aria-controls="datatable-papers" rowspan="1" colspan="1" style="width: 79px;" aria-label="Code: activate to sort column ascending"><span>Code</span></th><th class="text-center sorting" tabindex="0" aria-controls="datatable-papers" rowspan="1" colspan="1" style="width: 107px;" aria-label="Results: activate to sort column ascending"><span>Results</span></th><th class="text-right sorting" tabindex="0" aria-controls="datatable-papers" rowspan="1" colspan="1" style="width: 85px;" aria-label="Date: activate to sort column ascending"><span>Date</span></th><th class="text-center sorting sorting_desc" tabindex="0" aria-controls="datatable-papers" rowspan="1" colspan="1" style="width: 79px;" aria-sort="descending" aria-label="Stars: activate to sort column ascending"><span>Stars</span></th></tr>
+      </thead><tbody><tr class="odd"><td>
+            <div class="black-links">
+                <a href="https://paperswithcode.com/paper/generalized-state-dependent-exploration-for">Smooth Exploration for Robotic Reinforcement Learning</a>
+            </div>
+            <div class="grey-links">
+              Jens Kober, Freek Stulp, Antonin Raffin
+            </div>
+          </td><td><div class="code-available text-center"><span class="icon-wrapper"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path d="M256 32C132.3 32 32 134.9 32 261.7c0 101.5 64.2 187.5 153.2 217.9a17.56 17.56 0 0 0 3.8.4c8.3 0 11.5-6.1 11.5-11.4 0-5.5-.2-19.9-.3-39.1a102.4 102.4 0 0 1-22.6 2.7c-43.1 0-52.9-33.5-52.9-33.5-10.2-26.5-24.9-33.6-24.9-33.6-19.5-13.7-.1-14.1 1.4-14.1h.1c22.5 2 34.3 23.8 34.3 23.8 11.2 19.6 26.2 25.1 39.6 25.1a63 63 0 0 0 25.6-6c2-14.8 7.8-24.9 14.2-30.7-49.7-5.8-102-25.5-102-113.5 0-25.1 8.7-45.6 23-61.6-2.3-5.8-10-29.2 2.2-60.8a18.64 18.64 0 0 1 5-.5c8.1 0 26.4 3.1 56.6 24.1a208.21 208.21 0 0 1 112.2 0c30.2-21 48.5-24.1 56.6-24.1a18.64 18.64 0 0 1 5 .5c12.2 31.6 4.5 55 2.2 60.8 14.3 16.1 23 36.6 23 61.6 0 88.2-52.4 107.6-102.3 113.3 8 7.1 15.2 21.1 15.2 42.5 0 30.7-.3 55.5-.3 63 0 5.4 3.1 11.5 11.4 11.5a19.35 19.35 0 0 0 4-.4C415.9 449.2 480 363.1 480 261.7 480 134.9 379.7 32 256 32z"></path></svg></span></div></td><td><div class="results-available text-center"><span class="icon-wrapper"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path d="M32 32v432a16 16 0 0 0 16 16h432" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"></path><rect x="96" y="224" width="80" height="192" rx="20" ry="20" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"></rect><rect x="240" y="176" width="80" height="240" rx="20" ry="20" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"></rect><rect x="383.64" y="112" width="80" height="304" rx="20" ry="20" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"></rect></svg></span></div></td><td><div class="text-right text-nowrap">12 May 2020</div></td><td class="sorting_1"><div class="stars-available text-center"><span class=" icon-wrapper icon-fa icon-fa-regular" data-name="star"><svg viewBox="0 0 576 513.795" xmlns="http://www.w3.org/2000/svg"><path d="M528.1 172.48c26.2 3.8 36.7 36.1 17.7 54.6l-105.7 103 25 145.5c4.5 26.3-23.199 45.9-46.4 33.7L288 440.58l-130.7 68.7c-23.2 12.3-50.899-7.4-46.399-33.7l25-145.5-105.7-103c-19-18.5-8.5-50.8 17.7-54.6l146.1-21.3 65.3-132.4c11.8-23.9 45.7-23.6 57.4 0l65.3 132.4zm-139.5 140.8l100.601-98-139-20.2-62.2-126-62.2 126-139 20.2 100.6 98-23.7 138.4 124.3-65.3 124.3 65.3z"></path></svg></span> 8,463</div></td></tr></tbody>
+  </table><div class="dataTables_paginate paging_simple_numbers" id="datatable-papers_paginate"><ul class="pagination"><li class="paginate_button page-item previous disabled" id="datatable-papers_previous"><a href="https://paperswithcode.com/method/gsde#" aria-controls="datatable-papers" data-dt-idx="0" tabindex="0" class="page-link">Previous</a></li><li class="paginate_button page-item active"><a href="https://paperswithcode.com/method/gsde#" aria-controls="datatable-papers" data-dt-idx="1" tabindex="0" class="page-link">1</a></li><li class="paginate_button page-item next disabled" id="datatable-papers_next"><a href="https://paperswithcode.com/method/gsde#" aria-controls="datatable-papers" data-dt-idx="2" tabindex="0" class="page-link">Next</a></li></ul></div><div class="dataTables_info" id="datatable-papers_info" role="status" aria-live="polite">Showing 1 to 1 of 1 papers </div></div>
+</div>
+
+<script>
+  
+      const DATATABLE_PAPERS_FILTER_NAME = 'papermethod__method_id';
+      const DATATABLE_PAPERS_FILTER_VALUE = '1734';
+    
+</script>
+
+        </div>
+
+        
+        <div id="tasks">
+            <h4 style="margin-bottom: 0.5rem">Tasks</h4>
+            <hr>
+            <div class="row">
+                    <div class="col-lg-6">
+                        <figure class="highcharts-figure">
+                            <div id="usage-container" data-highcharts-chart="0" style="overflow: hidden;"><div id="highcharts-6q98j7h-0" dir="ltr" class="highcharts-container " style="position: relative; overflow: hidden; width: 540px; height: 400px; text-align: left; line-height: normal; z-index: 0; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); user-select: none; touch-action: manipulation; outline: none;"><svg version="1.1" class="highcharts-root" style="font-family:&quot;Lucida Grande&quot;, &quot;Lucida Sans Unicode&quot;, Arial, Helvetica, sans-serif;font-size:12px;" xmlns="http://www.w3.org/2000/svg" width="540" height="400" viewBox="0 0 540 400"><desc>Created with Highcharts 9.3.0</desc><defs><clippath id="highcharts-6q98j7h-3-"><rect x="0" y="0" width="520" height="375" fill="none"></rect></clippath></defs><rect fill="#ffffff" class="highcharts-background" x="0" y="0" width="540" height="400" rx="0" ry="0"></rect><rect fill="none" class="highcharts-plot-background" x="10" y="10" width="520" height="375"></rect><g class="highcharts-pane-group" data-z-index="0"></g><rect fill="none" class="highcharts-plot-border" data-z-index="1" x="10" y="10" width="520" height="375"></rect><g class="highcharts-series-group" data-z-index="3"><g class="highcharts-series highcharts-series-0 highcharts-pie-series highcharts-tracker" data-z-index="0.1" opacity="1" transform="translate(10,10) scale(1 1)" style="cursor:pointer;" clip-path="none"><path fill="#7cb5ec" d="M 282.98340063389884 106.00000169042305 A 81.5 81.5 0 0 1 283.0649006269248 268.9999741589445 L 283 187.5 A 0 0 0 0 0 283 187.5 Z" transform="translate(0,0)" stroke="#ffffff" stroke-width="1" opacity="1" stroke-linejoin="round" class="highcharts-point highcharts-color-0"></path><path fill="#434348" d="M 282.98340063389884 268.99999830957694 A 81.5 81.5 0 0 1 282.8867981350472 106.0000786175976 L 283 187.5 A 0 0 0 0 0 283 187.5 Z" transform="translate(0,0)" stroke="#ffffff" stroke-width="1" opacity="1" stroke-linejoin="round" class="highcharts-point highcharts-color-1"></path></g><g class="highcharts-markers highcharts-series-0 highcharts-pie-series" data-z-index="0.1" opacity="1" transform="translate(10,10) scale(1 1)" clip-path="none"></g></g><text x="270" text-anchor="middle" class="highcharts-title" data-z-index="4" style="color:#333333;font-size:18px;fill:#333333;" y="24"></text><text x="270" text-anchor="middle" class="highcharts-subtitle" data-z-index="4" style="color:#666666;fill:#666666;" y="24"></text><text x="10" text-anchor="start" class="highcharts-caption" data-z-index="4" style="color:#666666;fill:#666666;" y="397"></text><g class="highcharts-data-labels highcharts-series-0 highcharts-pie-series highcharts-tracker" data-z-index="6" opacity="1" transform="translate(10,10) scale(1 1)" style="cursor:pointer;"><path fill="none" class="highcharts-data-label-connector highcharts-color-0" stroke="#7cb5ec" stroke-width="1" d="M 399.5 187.5 C 394.5 187.5 376.5 187.5 370.5 187.5 L 364.5 187.5"></path><path fill="none" class="highcharts-data-label-connector highcharts-color-1" stroke="#434348" stroke-width="1" d="M 166.5 187.5 C 171.5 187.5 189.5 187.5 195.5 187.5 L 201.5 187.5"></path><g class="highcharts-label highcharts-data-label highcharts-data-label-color-0" data-z-index="1" style="cursor:pointer;" transform="translate(405,178)"><text x="5" data-z-index="1" y="16" style="color:#000000;font-size:11px;font-weight:bold;fill:#000000;"><tspan class="highcharts-text-outline" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2px" stroke-linejoin="round" style="">Continuous Control<tspan x="5" y="16">​</tspan></tspan>Continuous Control</text></g><g class="highcharts-label highcharts-data-label highcharts-data-label-color-1" data-z-index="1" style="cursor:pointer;" transform="translate(0,178)"><text x="5" data-z-index="1" y="16" style="color:#000000;font-size:11px;font-weight:bold;fill:#000000;"><tspan class="highcharts-text-outline" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="2px" stroke-linejoin="round" style="">Reinforcement Learning (RL)<tspan x="5" y="16">​</tspan></tspan>Reinforcement Learning (RL)</text></g></g><g class="highcharts-legend highcharts-no-tooltip" data-z-index="7"><rect fill="none" class="highcharts-legend-box" rx="0" ry="0" x="0" y="0" width="8" height="8" visibility="hidden"></rect><g data-z-index="1"><g></g></g></g></svg></div></div>
+                        </figure>
+                    </div>
+                    <div class="col-lg-6 task-methods">
+                        <table>
+                            <tbody><tr>
+                                <th>Task</th>
+                                <th class="text-right">Papers</th>
+                                <th class="text-right">Share</th>
+                            </tr>
+                            
+                            <tr>
+                                <td><span class="dot" style="background-color: #2f7ed8"></span>
+                                    
+                                        <a href="https://paperswithcode.com/task/continuous-control">Continuous Control</a>
+                                    
+                                </td>
+                                <td class="text-right">1</td>
+                                <td class="text-right">50.00%</td>
+                            </tr>
+                            
+                            <tr>
+                                <td><span class="dot" style="background-color: #0d233a"></span>
+                                    
+                                        <a href="https://paperswithcode.com/task/reinforcement-learning-1">Reinforcement Learning (RL)</a>
+                                    
+                                </td>
+                                <td class="text-right">1</td>
+                                <td class="text-right">50.00%</td>
+                            </tr>
+                            
+                        </tbody></table>
+                    </div>
+                </div>
+
+        </div>
+        
+
+
+        <div id="trends">
+            <h4 style="margin-bottom: 0.5rem">Usage Over Time</h4>
+            <hr>
+            <figure style="margin-top: 2.5rem" class="highcharts-figure">
+                <div id="container" data-highcharts-chart="1" style="overflow: hidden;"><div id="highcharts-6q98j7h-4" dir="ltr" class="highcharts-container " style="position: relative; overflow: hidden; width: 1110px; height: 250px; text-align: left; line-height: normal; z-index: 0; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); user-select: none; touch-action: manipulation; outline: none;"><svg version="1.1" class="highcharts-root" style="font-family:&quot;Lucida Grande&quot;, &quot;Lucida Sans Unicode&quot;, Arial, Helvetica, sans-serif;font-size:12px;" xmlns="http://www.w3.org/2000/svg" width="1110" height="250" viewBox="0 0 1110 250"><desc>Created with Highcharts 9.3.0</desc><defs><clippath id="highcharts-6q98j7h-5-"><rect x="0" y="0" width="866" height="203" fill="none"></rect></clippath><clippath id="highcharts-6q98j7h-34-"><rect x="0" y="0" width="866" height="203" fill="none"></rect></clippath></defs><rect fill="#ffffff" class="highcharts-background" x="0" y="0" width="1110" height="250" rx="0" ry="0"></rect><rect fill="none" class="highcharts-plot-background" x="92" y="10" width="866" height="203"></rect><g class="highcharts-pane-group" data-z-index="0"></g><g class="highcharts-grid highcharts-xaxis-grid" data-z-index="1"><path fill="none" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 132.5 10 L 132.5 213" opacity="1"></path><path fill="none" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 383.5 10 L 383.5 213" opacity="1"></path><path fill="none" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 635.5 10 L 635.5 213" opacity="1"></path><path fill="none" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 886.5 10 L 886.5 213" opacity="1"></path><path fill="none" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 257.5 10 L 257.5 213" opacity="1"></path><path fill="none" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 509.5 10 L 509.5 213" opacity="1"></path><path fill="none" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 760.5 10 L 760.5 213" opacity="1"></path></g><g class="highcharts-grid highcharts-yaxis-grid" data-z-index="1"><path fill="none" stroke="#e6e6e6" stroke-width="1" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 92 213.5 L 958 213.5" opacity="1"></path><path fill="none" stroke="#e6e6e6" stroke-width="1" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 92 145.5 L 958 145.5" opacity="1"></path><path fill="none" stroke="#e6e6e6" stroke-width="1" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 92 78.5 L 958 78.5" opacity="1"></path><path fill="none" stroke="#e6e6e6" stroke-width="1" stroke-dasharray="none" data-z-index="1" class="highcharts-grid-line" d="M 92 9.5 L 958 9.5" opacity="1"></path></g><rect fill="none" class="highcharts-plot-border" data-z-index="1" x="92" y="10" width="866" height="203"></rect><g class="highcharts-axis highcharts-xaxis" data-z-index="2"><path fill="none" class="highcharts-tick" stroke="#ccd6eb" stroke-width="1" d="M 132.5 213 L 132.5 223" opacity="1"></path><path fill="none" class="highcharts-tick" stroke="#ccd6eb" stroke-width="1" d="M 383.5 213 L 383.5 223" opacity="1"></path><path fill="none" class="highcharts-tick" stroke="#ccd6eb" stroke-width="1" d="M 635.5 213 L 635.5 223" opacity="1"></path><path fill="none" class="highcharts-tick" stroke="#ccd6eb" stroke-width="1" d="M 886.5 213 L 886.5 223" opacity="1"></path><path fill="none" class="highcharts-tick" stroke="#ccd6eb" stroke-width="1" d="M 257.5 213 L 257.5 223" opacity="1"></path><path fill="none" class="highcharts-tick" stroke="#ccd6eb" stroke-width="1" d="M 509.5 213 L 509.5 223" opacity="1"></path><path fill="none" class="highcharts-tick" stroke="#ccd6eb" stroke-width="1" d="M 760.5 213 L 760.5 223" opacity="1"></path><path fill="none" class="highcharts-axis-line" stroke="#ccd6eb" stroke-width="1" data-z-index="7" d="M 92 213.5 L 958 213.5"></path></g><g class="highcharts-axis highcharts-yaxis" data-z-index="2"><text x="26.337499618530273" data-z-index="7" text-anchor="middle" transform="translate(0,0) rotate(270 26.337499618530273 111.5)" class="highcharts-axis-title" style="color:#666666;fill:#666666;" y="111.5">Proportion of Papers (Quarterly)</text><path fill="none" class="highcharts-axis-line" data-z-index="7" d="M 92 10 L 92 213"></path></g><g class="highcharts-series-group" data-z-index="3"><g class="highcharts-series highcharts-series-0 highcharts-line-series highcharts-color-0" data-z-index="0.1" opacity="1" transform="translate(92,10) scale(1 1)" clip-path="url(#highcharts-6q98j7h-34-)"><path fill="none" d="M 8.4901960784314 203 L 40.192094552493 203 L 71.176430815734 203 L 102.51954818439 203 L 134.20709541423 203 L 165.90899388829 203 L 196.90768139575 203 L 228.23644752018 203 L 259.92399475003 203 L 291.62589322409 203 L 322.95465934853 203 L 354.29777671718 203 L 385.98532394702 203 L 417.68722242108 203 L 448.67155868433 203 L 480.01467605298 203 L 511.70222328282 203 L 543.40412175688 203 L 574.38845802012 203 L 605.73157538878 203 L 637.41912261862 203 L 669.12102109268 203 L 700.10535735592 203 L 731.44847472458 203 L 763.13602195442 203 L 794.83792042848 203 L 826.18103779713 203 L 857.50980392157 203" class="highcharts-graph" data-z-index="1" stroke="#4285f4" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M 8.4901960784314 203 L 40.192094552493 203 L 71.176430815734 203 L 102.51954818439 203 L 134.20709541423 203 L 165.90899388829 203 L 196.90768139575 203 L 228.23644752018 203 L 259.92399475003 203 L 291.62589322409 203 L 322.95465934853 203 L 354.29777671718 203 L 385.98532394702 203 L 417.68722242108 203 L 448.67155868433 203 L 480.01467605298 203 L 511.70222328282 203 L 543.40412175688 203 L 574.38845802012 203 L 605.73157538878 203 L 637.41912261862 203 L 669.12102109268 203 L 700.10535735592 203 L 731.44847472458 203 L 763.13602195442 203 L 794.83792042848 203 L 826.18103779713 203 L 857.50980392157 203" visibility="visible" data-z-index="2" class="highcharts-tracker-line" stroke-linecap="round" stroke-linejoin="round" stroke="rgba(192,192,192,0.0001)" stroke-width="23"></path></g><g class="highcharts-markers highcharts-series-0 highcharts-line-series highcharts-color-0 highcharts-tracker" data-z-index="0.1" opacity="1" transform="translate(92,10) scale(1 1)" clip-path="none"></g><g class="highcharts-series highcharts-series-1 highcharts-line-series highcharts-color-1" data-z-index="0.1" opacity="1" transform="translate(92,10) scale(1 1)" clip-path="url(#highcharts-6q98j7h-34-)"><path fill="none" d="M 8.4901960784314 203 L 40.192094552493 203 L 71.176430815734 169.16666666666666 L 102.51954818439 203 L 134.20709541423 203 L 165.90899388829 169.16666666666666 L 196.90768139575 203 L 228.23644752018 135.33333333333331 L 259.92399475003 169.16666666666666 L 291.62589322409 169.16666666666666 L 322.95465934853 135.33333333333331 L 354.29777671718 135.33333333333331 L 385.98532394702 101.5 L 417.68722242108 135.33333333333331 L 448.67155868433 101.5 L 480.01467605298 67.66666666666666 L 511.70222328282 101.5 L 543.40412175688 67.66666666666666 L 574.38845802012 101.5 L 605.73157538878 101.5 L 637.41912261862 101.5 L 669.12102109268 67.66666666666666 L 700.10535735592 67.66666666666666 L 731.44847472458 33.833333333333314 L 763.13602195442 67.66666666666666 L 794.83792042848 67.66666666666666 L 826.18103779713 101.5 L 857.50980392157 67.66666666666666" class="highcharts-graph" data-z-index="1" stroke="#db4437" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M 8.4901960784314 203 L 40.192094552493 203 L 71.176430815734 169.16666666666666 L 102.51954818439 203 L 134.20709541423 203 L 165.90899388829 169.16666666666666 L 196.90768139575 203 L 228.23644752018 135.33333333333331 L 259.92399475003 169.16666666666666 L 291.62589322409 169.16666666666666 L 322.95465934853 135.33333333333331 L 354.29777671718 135.33333333333331 L 385.98532394702 101.5 L 417.68722242108 135.33333333333331 L 448.67155868433 101.5 L 480.01467605298 67.66666666666666 L 511.70222328282 101.5 L 543.40412175688 67.66666666666666 L 574.38845802012 101.5 L 605.73157538878 101.5 L 637.41912261862 101.5 L 669.12102109268 67.66666666666666 L 700.10535735592 67.66666666666666 L 731.44847472458 33.833333333333314 L 763.13602195442 67.66666666666666 L 794.83792042848 67.66666666666666 L 826.18103779713 101.5 L 857.50980392157 67.66666666666666" visibility="visible" data-z-index="2" class="highcharts-tracker-line" stroke-linecap="round" stroke-linejoin="round" stroke="rgba(192,192,192,0.0001)" stroke-width="23"></path></g><g class="highcharts-markers highcharts-series-1 highcharts-line-series highcharts-color-1 highcharts-tracker" data-z-index="0.1" opacity="1" transform="translate(92,10) scale(1 1)" clip-path="none"></g></g><text x="555" text-anchor="middle" class="highcharts-title" data-z-index="4" style="color:#333333;font-size:18px;fill:#333333;" y="24"></text><text x="555" text-anchor="middle" class="highcharts-subtitle" data-z-index="4" style="color:#666666;fill:#666666;" y="24"></text><text x="10" text-anchor="start" class="highcharts-caption" data-z-index="4" style="color:#666666;fill:#666666;" y="247"></text><g class="highcharts-legend highcharts-no-tooltip" data-z-index="7" transform="translate(970,99)"><rect fill="none" class="highcharts-legend-box" rx="0" ry="0" x="0" y="0" width="130" height="47" visibility="visible"></rect><g data-z-index="1"><g><g class="highcharts-legend-item highcharts-line-series highcharts-color-0 highcharts-series-0" data-z-index="1" transform="translate(8,3)"><path fill="none" d="M 0 11 L 16 11" class="highcharts-graph" stroke="#4285f4" stroke-width="3"></path><text x="21" style="color:#333333;cursor:pointer;font-size:12px;font-weight:bold;fill:#333333;" text-anchor="start" data-z-index="2" y="15">gSDE</text></g><g class="highcharts-legend-item highcharts-line-series highcharts-color-1 highcharts-series-1" data-z-index="1" transform="translate(8,21)"><path fill="none" d="M 0 11 L 16 11" class="highcharts-graph" stroke="#db4437" stroke-width="3"></path><text x="21" y="15" style="color:#333333;cursor:pointer;font-size:12px;font-weight:bold;fill:#333333;" text-anchor="start" data-z-index="2">Counterfactuals</text></g></g></g></g><g class="highcharts-axis-labels highcharts-xaxis-labels" data-z-index="7"><text x="132.56522690212" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="middle" transform="translate(0,0)" y="232" opacity="1">2018</text><text x="383.99902557372" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="middle" transform="translate(0,0)" y="232" opacity="1">2020</text><text x="635.77725410651" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="middle" transform="translate(0,0)" y="232" opacity="1">2022</text><text x="887.21105277811" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="middle" transform="translate(0,0)" y="232" opacity="1">2024</text><text x="258.28212623792" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="middle" transform="translate(0,0)" y="232" opacity="1">2019</text><text x="510.06035477071" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="middle" transform="translate(0,0)" y="232" opacity="1">2021</text><text x="761.49415344231" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="middle" transform="translate(0,0)" y="232" opacity="1">2023</text></g><g class="highcharts-axis-labels highcharts-yaxis-labels" data-z-index="7"><text x="77" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="end" transform="translate(0,0)" y="217" opacity="1">0</text><text x="77" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="end" transform="translate(0,0)" y="149" opacity="1">0.0002</text><text x="77" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="end" transform="translate(0,0)" y="82" opacity="1">0.0004</text><text x="77" style="color:#666666;cursor:default;font-size:11px;fill:#666666;" text-anchor="end" transform="translate(0,0)" y="14" opacity="1">0.0006</text></g></svg></div></div>
+            </figure>
+            <span class="experimental-note hidden-element"><span class=" icon-wrapper icon-ion" data-name="flask-outline"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="32" d="M176 48h160M118 304h276M208 48v93.48a64.09 64.09 0 0 1-9.88 34.18L73.21 373.49C48.4 412.78 76.63 464 123.08 464h265.84c46.45 0 74.68-51.22 49.87-90.51L313.87 175.66a64.09 64.09 0 0 1-9.87-34.18V48"></path></svg></span> This feature is experimental;
+                we are continuously improving our matching algorithm.</span>
+        </div>
+
+            <div id="components">
+            <h4 style="margin-bottom: 0.5rem">Components</h4>
+            <hr>
+                <table>
+                    <tbody><tr>
+                        <th>Component</th>
+                        <th>Type</th>
+                        <th class="hidden-element">
+                            <div class="float-right">
+                                <div class="dropdown edit-button">
+                                    <button class="dropdown-toggle badge badge-edit" type="button" id="compEditMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <span class=" icon-wrapper icon-fa icon-fa-solid" data-name="edit"><svg viewBox="0 0 576 514.999" xmlns="http://www.w3.org/2000/svg"><path d="M402.6 85.198l90.2 90.2c3.8 3.8 3.8 10 0 13.8l-218.399 218.4-92.8 10.3c-12.4 1.4-22.9-9.1-21.5-21.5l10.3-92.8 218.4-218.4c3.799-3.8 10-3.8 13.799 0zm162-22.9c15.2 15.2 15.2 39.9 0 55.2l-35.4 35.4c-3.8 3.8-10 3.8-13.8 0l-90.2-90.2c-3.8-3.8-3.8-10 0-13.8l35.4-35.4c15.3-15.2 40-15.2 55.2 0zM384 348.198c0-3.2 1.3-6.2 3.5-8.5l40-40c7.6-7.5 20.5-2.2 20.5 8.5v157.8c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48v-352c0-26.5 21.5-48 48-48h285.8c10.7 0 16.1 12.9 8.5 20.5l-40 40c-2.3 2.2-5.3 3.5-8.5 3.5H64v320h320v-101.8z"></path></svg></span>
+                                        Edit
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="compEditMenu" x-placement="bottom-end" style="position: absolute; transform: translate3d(55px, 35px, 0px); top: 0px; left: 0px; will-change: transform;">
+                                        <a class="dropdown-item" href="https://paperswithcode.com/method/gsde#loginModal" data-bs-toggle="modal">
+                                            <span class=" icon-wrapper icon-ion" data-name="add"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M256 112v288m144-144H112"></path></svg></span>
+                                            Add</a>
+                                        <a class="dropdown-item" href="https://paperswithcode.com/method/gsde#loginModal" data-bs-toggle="modal">
+                                            <span class=" icon-wrapper icon-ion" data-name="remove"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M400 256H112"></path></svg></span>
+                                            Remove</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
+                    </tr>
+                    
+                        <tr>
+                            <td>
+                                <span style="font-weight: bold">🤖 No Components Found</span>
+                            </td>
+                        <td>You can <a data-bs-toggle="modal" href="https://paperswithcode.com/method/gsde#loginModal">add them</a> if they exist; e.g. <a href="https://paperswithcode.com/method/mask-r-cnn">Mask R-CNN</a> uses <a href="https://paperswithcode.com/method/roi-align">RoIAlign</a></td>
+                        <td class="hidden-element"></td>
+                        </tr>
+                    
+                    
+                </tbody></table>
+            </div>
+
+
+
+
+        <div class="collections">
+            <h4>
+                Categories        <div class="float-right">
+
+                    <div class="dropdown edit-button">
+                        <button class="dropdown-toggle badge badge-edit" type="button" id="evalEditMenu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class=" icon-wrapper icon-fa icon-fa-solid" data-name="edit"><svg viewBox="0 0 576 514.999" xmlns="http://www.w3.org/2000/svg"><path d="M402.6 85.198l90.2 90.2c3.8 3.8 3.8 10 0 13.8l-218.399 218.4-92.8 10.3c-12.4 1.4-22.9-9.1-21.5-21.5l10.3-92.8 218.4-218.4c3.799-3.8 10-3.8 13.799 0zm162-22.9c15.2 15.2 15.2 39.9 0 55.2l-35.4 35.4c-3.8 3.8-10 3.8-13.8 0l-90.2-90.2c-3.8-3.8-3.8-10 0-13.8l35.4-35.4c15.3-15.2 40-15.2 55.2 0zM384 348.198c0-3.2 1.3-6.2 3.5-8.5l40-40c7.6-7.5 20.5-2.2 20.5 8.5v157.8c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48v-352c0-26.5 21.5-48 48-48h285.8c10.7 0 16.1 12.9 8.5 20.5l-40 40c-2.3 2.2-5.3 3.5-8.5 3.5H64v320h320v-101.8z"></path></svg></span>
+                            Edit
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="evalEditMenu" x-placement="bottom-end" style="position: absolute; transform: translate3d(55px, 35px, 0px); top: 0px; left: 0px; will-change: transform;">
+                            <a class="dropdown-item" href="https://paperswithcode.com/method/gsde#loginModal" data-bs-toggle="modal">
+                                <span class=" icon-wrapper icon-ion" data-name="add"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M256 112v288m144-144H112"></path></svg></span>
+                                Add</a>
+                            <a class="dropdown-item" href="https://paperswithcode.com/method/gsde#loginModal" data-bs-toggle="modal">
+                                <span class=" icon-wrapper icon-ion" data-name="remove"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="32" d="M400 256H112"></path></svg></span>
+                                Remove</a>
+                        </div>
+                    </div>
+
+                </div><hr>
+
+
+
+            </h4>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                
+                    <ul class="list-unstyled">
+                        <li>
+                            <a href="https://paperswithcode.com/methods/category/exploration-strategies">
+                                <span class="badge badge-primary">
+                                    
+                                        <img src="./gSDE Explained _ Papers With Code_files/default.gif">
+                                    
+                                    <span>Exploration Strategies</span>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                
+            </div>
+        </div>
+
+
+    </div>
+    </div>
+
+    <script id="task_data" type="application/json">[{"name": "Continuous Control", "slug": "continuous-control", "papers": 1, "y": 50.0, "dot_color": "#2f7ed8"}, {"name": "Reinforcement Learning (RL)", "slug": "reinforcement-learning-1", "papers": 1, "y": 50.0, "dot_color": "#0d233a"}]</script>
+    <script id="time_series_data" type="application/json">[{"name": "gSDE", "data": [{"time": "2017-09-30 00:00:00", "prop": 0.0}, {"time": "2017-12-31 00:00:00", "prop": 0.0}, {"time": "2018-03-31 00:00:00", "prop": 0.0}, {"time": "2018-06-30 00:00:00", "prop": 0.0}, {"time": "2018-09-30 00:00:00", "prop": 0.0}, {"time": "2018-12-31 00:00:00", "prop": 0.0}, {"time": "2019-03-31 00:00:00", "prop": 0.0}, {"time": "2019-06-30 00:00:00", "prop": 0.0}, {"time": "2019-09-30 00:00:00", "prop": 0.0}, {"time": "2019-12-31 00:00:00", "prop": 0.0}, {"time": "2020-03-31 00:00:00", "prop": 0.0}, {"time": "2020-06-30 00:00:00", "prop": 2.1909164603553667e-05}, {"time": "2020-09-30 00:00:00", "prop": 0.0}, {"time": "2020-12-31 00:00:00", "prop": 0.0}, {"time": "2021-03-31 00:00:00", "prop": 0.0}, {"time": "2021-06-30 00:00:00", "prop": 0.0}, {"time": "2021-09-30 00:00:00", "prop": 0.0}, {"time": "2021-12-31 00:00:00", "prop": 0.0}, {"time": "2022-03-31 00:00:00", "prop": 0.0}, {"time": "2022-06-30 00:00:00", "prop": 0.0}, {"time": "2022-09-30 00:00:00", "prop": 0.0}, {"time": "2022-12-31 00:00:00", "prop": 0.0}, {"time": "2023-03-31 00:00:00", "prop": 0.0}, {"time": "2023-06-30 00:00:00", "prop": 0.0}, {"time": "2023-09-30 00:00:00", "prop": 0.0}, {"time": "2023-12-31 00:00:00", "prop": 0.0}, {"time": "2024-03-31 00:00:00", "prop": 0.0}, {"time": "2024-06-30 00:00:00", "prop": 0.0}]}, {"name": "Counterfactuals", "data": [{"time": "2017-09-30 00:00:00", "prop": 0.0}, {"time": "2017-12-31 00:00:00", "prop": 3.8572806171648985e-05}, {"time": "2018-03-31 00:00:00", "prop": 7.864417443277889e-05}, {"time": "2018-06-30 00:00:00", "prop": 0.0}, {"time": "2018-09-30 00:00:00", "prop": 0.0}, {"time": "2018-12-31 00:00:00", "prop": 6.460156981814658e-05}, {"time": "2019-03-31 00:00:00", "prop": 3.388566975026261e-05}, {"time": "2019-06-30 00:00:00", "prop": 0.0002050801277356224}, {"time": "2019-09-30 00:00:00", "prop": 8.460714084268712e-05}, {"time": "2019-12-31 00:00:00", "prop": 0.00013547932585487456}, {"time": "2020-03-31 00:00:00", "prop": 0.0001918123527155149}, {"time": "2020-06-30 00:00:00", "prop": 0.00015336415222487565}, {"time": "2020-09-30 00:00:00", "prop": 0.0002796420581655481}, {"time": "2020-12-31 00:00:00", "prop": 0.0002225090116149704}, {"time": "2021-03-31 00:00:00", "prop": 0.00025482251611752413}, {"time": "2021-06-30 00:00:00", "prop": 0.0004134281461881925}, {"time": "2021-09-30 00:00:00", "prop": 0.00027401880190548457}, {"time": "2021-12-31 00:00:00", "prop": 0.00037875767482656883}, {"time": "2022-03-31 00:00:00", "prop": 0.0003261082244494206}, {"time": "2022-06-30 00:00:00", "prop": 0.00031265632816408203}, {"time": "2022-09-30 00:00:00", "prop": 0.00032314354036062817}, {"time": "2022-12-31 00:00:00", "prop": 0.0003937550449865139}, {"time": "2023-03-31 00:00:00", "prop": 0.0004160858801256579}, {"time": "2023-06-30 00:00:00", "prop": 0.0004920049200492004}, {"time": "2023-09-30 00:00:00", "prop": 0.0003771876885938443}, {"time": "2023-12-31 00:00:00", "prop": 0.0004004526856446418}, {"time": "2024-03-31 00:00:00", "prop": 0.0003262418654166452}, {"time": "2024-06-30 00:00:00", "prop": 0.0004288093942242673}]}]</script>
+
+
+
+</div>
+
+
+
+
+
+<div class="footer">
+  <div class="footer-contact">
+    <span class="footer-contact-item">Contact us on:</span>
+
+    <a class="footer-contact-item" href="mailto:hello@paperswithcode.com">
+    <span class=" icon-wrapper icon-ion" data-name="mail"><svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><path d="M424 80H88a56.06 56.06 0 0 0-56 56v240a56.06 56.06 0 0 0 56 56h336a56.06 56.06 0 0 0 56-56V136a56.06 56.06 0 0 0-56-56zm-14.18 92.63l-144 112a16 16 0 0 1-19.64 0l-144-112a16 16 0 1 1 19.64-25.26L256 251.73l134.18-104.36a16 16 0 0 1 19.64 25.26z"></path></svg></span> hello@paperswithcode.com
+    </a>.
+    <span class="footer-contact-item">
+        Papers With Code is a free resource with all data licensed under <a rel="noreferrer" href="https://creativecommons.org/licenses/by-sa/4.0/">CC-BY-SA</a>.
+    </span>
+  </div>
+
+  <div class="footer-links">
+      <a href="https://paperswithcode.com/site/terms">Terms</a>
+      <a href="https://paperswithcode.com/site/data-policy">Data policy</a>
+      <a href="https://paperswithcode.com/site/cookies-policy">Cookies policy</a>
+      <a href="https://paperswithcode.com/about#team" class="fair-logo"> from
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANAAAAAgCAMAAABU6AZfAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAJcEhZcwAAFiUAABYlAUlSJPAAAABFUExURUdwTBwqMhwqMxsqMhkqMxsqMhwqMgCA+hwrMxJIgBsrMxsqMgJ28AF58wF38BsqMwB58hsqMwF17wF07hwrMwRm4QJz7Wj6SIIAAAAUdFJOUwDP87wcPIT+4A1tVti1Ta0smZVzG3JP8wAABR9JREFUWMO1memWpCoMgF0QxX1//0e9kCAkAadq5tzKjzndQmM+szNFEWQ9puu6xn02BXm4j23bTsdapKJAMguFgRVT/Ejyx4uH5hgvL1PUfm69jEd6bN05GTJvXF5X/hfRcPyWe2kTLDFdRA4ENVMbZZJGMt3ppEttNMDC2X/Qa7MK1OrveZoKz2/445I+U4znuvaExxKZLFCqtym/A6rzn+OjbHj8ubwDmfESslvtgWea13WeckQPUKJTf/4USHkDnVXzCrT74DnmeX+8rjgcxA4QBmPpyAKdOm+5XwFpgHH/bG9AMzLMqM9DxxCQaM0qLr7U4xE/AgIDVRBHlcoDeYd7lFee6GZOBvaaskD8S6nut0Dg0ItZEt+IQAfjseIzRDvS/WCxWQJ17phqEGqepQBS/VaXZa0H/4XUYMVt6nr309DEjYvduPT2gWELQTr0iQbC1+SADOg/kjVvspGqX6zSRAgEKbqOf6zgd82AVB+8s0YNm5NL6Y8MGzttwKt0krP9+9A/+hzQTALoUX5MnxW7iCIEUmD7IVZb8G0G1HRE9UqbWKkEUFPSR0MWqH5eB65XmgzQdN3WGjxReROxPD2LROeBIEiD7UGLraBAjMcS9W9AquTPckBgoMqEWG1SIGN57otn5KO9Y30N4rq6MQFC5TX1cEWBfJLY+mbQ5ZMUm8UK7F1A9GNc90T3enkpCZhCdUzfdQq0Wp774gnZao55YU3SgkmAVBez1eDfR4BABd/XqY36ichyaLUnyJZ8jatimUBjqQTouK2M3OGs4miiiduN5bkHCL15C9Zw7heBRMHYSMRxIGyYFsPqpwTqactT8w0P0OSA9iRY9jQvrDyIAhCoAjrrR90I1PNCpcivHEh+cATUmS5xoCaNB3ggMzqgRO/RYPIb1WviDkB4sv22kB8ghQcgUIFWzyUmaQ6kpf5DCoTFh5fwQQCt493e9ypD5Xjq7S5cMQeEubpBf2oKCoSMohPzduBAi2yimhRIc3NvrOd+gCxPexvhcGPM3SRoJpbmIhAGSudTNgNCR+qIRL05UCebsxTIiAYOX6sEkONphRkw9A9ZjADIZIDg857we5MBSiQHVMlWJgXyeTBIyVpGD4RttHC4yVtENHn7K5ASdeM3QGX2sKcKBCBmITYmrGii9TOQT7JYwxOgrhbyby4XJrvs54kuR8vlCg4XEgEOEs8Q8R5DYZboCwEESpTmi/Hhc1Lo8zxPlghZjpbLqWVGUGxSes1y4W2lkkC+Wf0C6GPaxtZo0VQW4nOhsJLqAg01HXqgGN0+083MegKoYLdisbDqzHVG1iZJYe0EUDoB+dj149gDRCCgt2lZ1zA5nhvCyEwvrc/b3N/HiZlMgINmZaR/aX3MJluf7Kepo8+F5tRfUh1wR0odzg8Srnm9w7L5SyB/p6H9Ptt0Vj310ngAlDHbnLo3mGc00sJiQ+4KEM+I8xC7fWv5VGcz3Y0C2ZCa70sgf0tXbnbY1jXpln3W6jYXDG4jNthdrfVWn8n4gAVAZe+0GgaEaeGFx4XRQyTM9yWQnNuIAy5/HPAWPuDJ8Yc66sYvSeY/8dhlYqH0kuQzkFQ03nnHCyI/gtc0GfM7BVPmL5J0yHPkXm6d3u6v/TLw3GL5ayDr6WW47awHYmS1VC+XJOVQcCCZBPk13SCvgmcb8uI/UqjqdvlOlk3j5OU20C0putdO1ZWNo0a8oumXslx0vMYaNrfPURt2hnp5G2rhtsEP5j/3Wqt0fQd1YgAAAABJRU5ErkJggg==">
+      </a>
+  </div>
+</div>
+
+
+
+<script>
+  // MathJax
+  window.MathJax = {
+    tex: {
+      inlineMath: [
+        ["$", "$"],
+        ["\\(", "\\)"],
+      ],
+    },
+  };
+
+  const mathjaxScript = document.createElement("script");
+  mathjaxScript.src = "https://production-assets.paperswithcode.com/static/js/mathjax/tex-chtml.js";
+  document.head.appendChild(mathjaxScript);
+</script>
+
+
+<script src="./gSDE Explained _ Papers With Code_files/766.4af6b88b.js.download" defer=""></script><script src="./gSDE Explained _ Papers With Code_files/351.a22a9607.js.download" defer=""></script><script src="./gSDE Explained _ Papers With Code_files/814.49dcf06c.js.download" defer=""></script><script src="./gSDE Explained _ Papers With Code_files/view_method.c1f0a493.js.download" defer=""></script>
+
+
+
+
+
+
+
+</div></body></html>
