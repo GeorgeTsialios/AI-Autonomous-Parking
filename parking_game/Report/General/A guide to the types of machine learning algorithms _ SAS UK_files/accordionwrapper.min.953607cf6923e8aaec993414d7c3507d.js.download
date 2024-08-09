@@ -1,1 +1,0 @@
-(function(b){function c(){rava.bind("a",{events:{click:function(){var a=b(this).attr("href");void 0!==a&&0===a.indexOf("#")&&"#"!==a&&"#/"!==a&&(a=b(SAS.Utils.escapeSelector(a)+"scroll"),a.length&&(a.addClass("is-active"),a.next().addClass("is-open")))}}})}var d=setInterval(function(){"undefined"!==typeof rava&&(clearInterval(d),c())},250)})(jQuery);

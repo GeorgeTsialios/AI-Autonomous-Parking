@@ -4,6 +4,7 @@ author:
 author-genitive: Γεωργίου Τσιάλιου
 author-mnr: 1072868
 subject: Διπλωματική εργασία - Σύγκριση αλγορίθμων μηχανικής μάθησης για την εκπαίδευση ευφυών πρακτόρων σε περιβάλλον παιχνιδιού
+title: Σύγκριση αλγορίθμων μηχανικής μάθησης για την εκπαίδευση ευφυών πρακτόρων σε περιβάλλον παιχνιδιού
 title-en:  Comparison of machine learning algorithms for the training of intelligent agents in a game environment
 date: Σεπτέμβριος 2024
 place: Πάτρα
@@ -15,18 +16,17 @@ commitee:
     - Χρήστος Φείδας, Αναπληρωτής Καθηγητής
 director: Γεώργιος Θεοδωρίδης,\\Αναπληρωτής Καθηγητής
 abstract-el:
-    - Στην παρούσα διπλωματική εργασία, πραγματοποιείται η πλήρης ανάπτυξη μίας εφαρμογής, με σκοπό τον χρονοπρογραμματισμό της εργασίας σε μεγάλες επιχειρήσεις. Στα πλαίσια της εργασίας αυτής, γίνεται ειδική μνεία στην επιστήμη της Αλληλεπίδρασης Ανθρώπου - Υπολογιστή και, ιδιαίτερα, στους κανόνες που διέπουν τον ανθρωποκεντρικό σχεδιασμό μίας εφαρμογής. Επιπλέον, εφαρμόζεται η τεχνική του Γραμμικού Προγραμματισμού, για την κατάρτιση του αλγορίθμου χρονοπρογραμματισμού εργασίας.
-    - Η έννοια της πλήρους ανάπτυξης της εφαρμογής περιλαμβάνει τόσο την ανάλυση απαιτήσεων και τη σχεδίαση της γραφικής διεπαφής, όσο και την υλοποίησή της σε μία μορφή λειτουργικού προϊόντος, το οποίο θέτει σε προτεραιότητα την καλή εμπειρία χρήστη και την ευχρηστία.
-    - Η καλή εμπειρία χρήσης της εφαρμογής τεκμηριώνεται με μεθόδους αξιολόγησης του ανθρωποκεντρικού σχεδιασμού καθ' όλη τη διάρκεια της ανάπτυξής της. Με την ολοκλήρωση της εργασίας, προκύπτει ένα προϊόν που καθιστά την καθημερινότητα των εργαζομένων μίας μεγάλης επιχείρησης ευκολότερη, αυτοματοποιώντας τις διαδικασίες που αφορούν τον προγραμματισμό της εργασίας, σε έναν κόσμο που μετασχηματίζεται ολοένα και ταχύτερα στην ψηφιακή εποχή.
+    - Στη σημερινή εποχή, το επιστημονικό πεδίο της Τεχνητής Νοημοσύνης αποτελεί ένα από τα πιο ραγδαία αναπτυσσόμενα ερευνητικά αντικείμενα  παγκοσμίως. Με πιο πρόσφατο παράδειγμα την ανάπτυξη των μεγάλων γλωσσικών μοντέλων (LLMs) όπως το ChatGPT της OpenAI, η Τεχνητή Νοημοσύνη παρεισφρύει ολοένα και περισσότερο στη ζωή των ανθρώπων, παρέχοντας εφαρμογές που λύνουν προβλήματα της καθημερινότητας με υπεράνθρωπη ακρίβεια και ταχύτητα. Στον πυρήνα των εφαρμογών αυτών βρίσκονται συχνά αλγόριθμοι Μηχανικής Μάθησης, ενός υποπεδίου της Τεχνητής Νοημοσύνης. Οι συγκεκριμένοι αλγόριθμοι εξετάζονται συνήθως πρώτα σε δοκιμαστικά περιβάλλοντα, όπως παιχνίδια, όπου η προσομοίωση της πραγματικότητας είναι εύκολη και ακίνδυνη.
+    - Στο πλαίσιο αυτό, στόχος της παρούσας διπλωματικής εργασίας είναι η εκπαίδευση πρακτόρων τεχνητής νοημοσύνης σε ένα απλό παιχνίδι, χρησιμοποιώντας διαφορετικούς αλγορίθμους και η σύγκριση τους σε όρους χρόνου εκπαίδευσης και τελικής επίδοσης. Συγκεκριμένα, αναπτύχθηκε ένα παιχνίδι στο οποίο ο πράκτορας καλείται να παρκάρει ένα αμάξι σε μία τυχαία θέση στάθμευσης. Οι αλγόριθμοι που εξετάστηκαν ανήκουν στην υποκατηγορία της Μηχανικής Μάθησης που ονομάζεται Ενισχυτική Μάθηση και είναι οι εξής&#58; Q-learning, Proximal Policy Optimization (PPO), Advantage Actor Critic (A2C), Soft Actor Critic (SAC) και Twin Delayed Deep Deterministic Policy Gradient (TD3).
+    - Ο κώδικας που αναπτύχθηκε για την υλοποίηση του παιχνιδιού και την εκπαίδευση των πρακτόρων είναι ελεύθερα διαθέσιμος στον παρακάτω σύνδεσμο&#58; [GitHub Repository](https://github.com/GeorgeTsialios/Thesis).
 abstract-en:
-    - In this diploma thesis, a full-stack application is being designed and developed, with the aim of supporting the work scheduling of large enterprises. In this context, a special mention is made in the science of Human - Computer Interaction and, more specifically, in the rules that govern the human-centered design of an application. Furthermore, it is the Linear Programming technique that is being employed, so as to develop the algorithm of the automatic shift scheduling.
-    - The concept of the full-stack application development includes not only the requirement analysis and the user interface design, but also its implementation to a form of an operating product, that prioritizes the best user experience and usability.
-    - The user experience of the application is documented by evaluation methods of the human-centered design framework, throughout the period of its design. Completing this thesis, results in a product that makes the daily life of a large enterprise's employees easier, by automating the work scheduling processes, in a world that is transforming ever faster to the digital era.
+    - In today's era, the scientific field of Artificial Intelligence is one of the most rapidly evolving research areas worldwide. Artificial Intelligence is increasingly entering people's lives, by offering applications that solve everyday problems with superhuman accuracy and speed. A recent example of this, is the development of Large Language Models (LLMs) like OpenAI's ChatGPT. At the core of these applications are often Machine Learning algorithms, a subfield of Artificial Intelligence. These algorithms are usually tested first in experimental environments, such as games, where simulating reality is easy and safe.
+    - In this context, the goal of this thesis is to train Artificial Intelligence agents in a simple game using different algorithms and compare them in terms of training time and final performance. More specifically, a game was developed in which the agent is tasked with parking a car in a random parking spot. The following algorithms -which belong to the Machine Learning subcategory called Reinforcement Learning- were used&#58; Q-learning, Proximal Policy Optimization (PPO), Advantage Actor Critic (A2C), Soft Actor Critic (SAC), and Twin Delayed Deep Deterministic Policy Gradient (TD3).
+    - The code developed for the implementation of the game and the training of the agents is publicly available at the following link&#58; [GitHub Repository](https://github.com/GeorgeTsialios/Thesis).
 acknowlegements:
-    - Με την ολοκλήρωση της διπλωματικής μου εργασίας, θα ήθελα να ευχαριστήσω θερμά όλους, όσοι με βοήθησαν, με καθοδήγησαν και με στήριξαν καθ' όλη τη διάρκεια της ακαδημαϊκής μου πορείας μέχρι σήμερα.
-    - Πρώτον, θα ήθελα να ευχαριστήσω τον κο Χρήστο Σιντόρη για τη συνεχή του βοήθεια και ενασχόληση κατά την εκπόνηση της εργασίας μου. Επίσης, θα ήθελα να ευχαριστήσω τον κο Νικόλαο Αβούρη για το εξαιρετικό του έργο, μιας και τα μαθήματά του ήταν πηγή έμπνευσης για εμένα από το πρώτο κιόλας έτος. Ευχαριστώ την κα Σοφία Δασκαλάκη και τον κο Χρήστο Βαλουξή, για τη βοήθειά τους σε θέματα Γραμμικής Βελτιστοποίησης.
-    - Ακόμη, θα ήθελα να ευχαριστήσω τους φίλους και συμφοιτητές μου για τη συνεχή συμπαράσταση. Ιδιαίτερα, ευχαριστώ τον φίλο και εξαιρετικό, πλέον, συνάδελφο, Γεώργιο Τσιάλιο, για την υπέροχη συνεργασία αυτά τα χρόνια, που μου έμαθε να αγαπώ την ομαδικότητα.
-    - Ξεχωριστές ευχαριστίες αξίζει η οικογένειά μου για τη βοήθεια και τη στήριξη που μου προσφέρουν συνεχώς. Ευχαριστώ ιδιαίτερα τη μητέρα μου, Χρύσα, και όλο το προσωπικό του [The Y Hotel](https://www.theyhotel.gr/) για την έμπνευση που μου προσέφεραν επί του θέματος της εργασίας μου.
+    - Φτάνοντας στο τέλος της ακαδημαϊκής μου σταδιοδρομίας, θα ήθελα να ευχαριστήσω όλους όσους με βοήθησαν, έμπρακτα αλλά και όχι μόνο, τα τελευταία πέντε έτη των σπουδών μου.
+    - Αρχικά, επιθυμώ να ευχαριστήσω τον επιβλέποντα της διπλωματικής μου εργασίας, κο Κυριάκο Σγάρμπα, ο οποίος μου έδωσε την ευκαιρία να ασχοληθώ με ένα τόσο ενδιαφέρον ερευνητικό πεδίο. Ακόμα, η εμπιστοσύνη που μου έδειξε και η καθοδήγηση του έπαιξαν καθοριστικό ρόλο στην ομαλή εκπόνηση της παρούσας εργασίας. 
+    - Στη συνέχεια, θα ήθελα να ευχαριστήσω θερμά την οικογένεια και τους φίλους μου για την συνεχή στήριξη που μου προσφέρουν. Ειδική αναφορά επιθυμώ να κάνω σε δύο άτομα, στα οποία οφείλω, σε μεγάλο βάθμο, τη μέχρι τώρα πορεία μου. Αρχικά, ευχαριστώ τον πατέρα μου, Ιωάννη, για τη μόνιμη υποστήριξη και την ανεκτίμητη συμπαράσταση του. Έπειτα, ευχαριστώ τον εξαιρετικό συνάδελφο και φίλο, Χρήστο Κατσανδρή, ο οποίος αποτέλεσε για εμένα παράδειγμα προς μίμηση και με ενέπνευσε να γίνω καλύτερος. Η αδιάλειπτη προθυμία του να βοηθήσει αποδείχθηκε πολύτιμη πολλές φορές, ενώ η συνεργασία μας σε διάφορα μαθήματα και εργασίες ήταν χαρά και τιμή μου.
 keywords-el:
     - Τεχνητή Νοημοσύνη
     - Μηχανική Μάθηση
@@ -74,7 +74,7 @@ pandoc-latex-environment:
 titlepage-text-color: 0A0A0A
 logo: images/uplogo.png
 logo-stamp: images/logo-up-4color-stamp.jpg
-signature: images/student-signature.pdf
+signature: images/signature-George-Tsialios-v2.pdf
 listings-disable-line-numbers: false
 disable-header-and-footer: false
 # header-center: header-center

@@ -1,0 +1,44 @@
+[
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "templates/eisvogel.tex",
+        "from": "templates/eisvogel.tex"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "bibliography/bibliography.bib",
+        "from": "bibliography/bibliography.bib"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "2-subject_overview/figures/SAE_6_levels.png",
+        "from": "2-subject_overview/figures/SAE_6_levels.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "2-subject_overview/figures/technologies.png",
+        "from": "2-subject_overview/figures/technologies.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/TypesofAI.png",
+        "from": "3-theory/figures/TypesofAI.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/MLSubset.png",
+        "from": "3-theory/figures/MLSubset.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/test.png",
+        "from": "3-theory/figures/test.png"
+    }
+]
