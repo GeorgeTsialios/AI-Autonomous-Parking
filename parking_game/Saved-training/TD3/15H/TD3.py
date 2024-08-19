@@ -768,4 +768,4 @@ if __name__ == '__main__':
             
     # Train/test using TD3
     # train_TD3(10000000, render=False, steps_previously_trained=1, run="15H")
-    test_TD3(100, run="15H", steps_trained=900000, render=False)
+    test_TD3(100, run="15H", steps_trained=2000000, render=False)

@@ -212,6 +212,7 @@ class ParkingGameEnv(gym.Env):
 
         self.reward = 0
         self.collisions = 0
+        self.inside_spot = False
         
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -240,7 +241,7 @@ class ParkingGameEnv(gym.Env):
         self.car.check_radars(PARKING_LOT_BORDER_MASK)
         self.car.move_player(action)                            
         # self.car.move_player()                            # Change to this to control the car with arrow keys
-        terminated, collides, inside_spot = self.car.check_collision()
+        terminated, collides, self.inside_spot = self.car.check_collision()
 
         # Construct the observation state:
         # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
@@ -256,17 +257,18 @@ class ParkingGameEnv(gym.Env):
             self.successes += 1
             self.times_list.append(self.current_step/20)
             self.collisions_list.append(self.collisions)
-            self.reward += 5000
-            if self.state[10] >= 0.4:         # extra reward for parking moving forward
-                self.reward += 1000
+            self.reward += 10000
             if self.render_mode == 'human':
                 self.render(terminated = True)
 
-        elif inside_spot:
-            self.reward += 2 + 2 / (abs(self.state[10] - 0.4) + 1)                      # reward for being inside the parking spot
+        elif self.inside_spot:
+            if self.state[10] >= 0.4:                                               # extra reward for parking moving forward
+                self.reward += 10 / (abs(self.state[10] - 0.4) + 1)                      # reward for being inside the parking spot
+            else:
+                self.reward += 5 / (abs(self.state[10] - 0.4) + 1)
             if self.state[10] == 0.4:                   # extra reward for being stationary
                 # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
-                self.reward += 5
+                self.reward += 10
 
         else:
             # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
@@ -278,21 +280,21 @@ class ParkingGameEnv(gym.Env):
 
             if collides:
                 self.collisions += 1
-                self.reward -= 500             # punish the car for colliding with an object
+                self.reward -= 6000             # punish the car for colliding with an object
 
             if abs(self.state[8] - 0.5) >= 0.1 or abs(self.state[9] - 0.5) >= 0.1:    # when the car is far away from the parking spot
                 if self.state[10] > 0.25 and self.state[10] < 0.55:    # punish the car for moving too slow
                      # print("BEING STATIONARY FAR AWAY PARKING SPOT", end=" ")
-                    self.reward -= 5
+                    self.reward -= 8
                     if self.state[10] == 0.4:
-                        self.reward -= 5
+                        self.reward -= 8
             else:                     # when the car is near the parking spot
                 if self.state[10] > 0.35 and self.state[10] < 0.45:    # punish the car for moving too slow
                      # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
-                    self.reward -= 3
+                    self.reward -= 5
                     if self.state[10] == 0.4:
-                        self.reward -= 5
-                if  (self.state[11] > 0.98 or self.state[11] < 0.02) or (self.state[11] > 0.48 and self.state[11] < 0.52):      # reward the car for being in the right angle
+                        self.reward -= 8
+                if (self.state[11] > 0.98 or self.state[11] < 0.02) or (self.state[11] > 0.48 and self.state[11] < 0.52):      # reward the car for being in the right angle
                     self.reward += 0.5
         
         if self.current_step >= self.max_steps:
@@ -317,7 +319,7 @@ class ParkingGameEnv(gym.Env):
         for index, spot in parking_spots.items():
             WIN.blit(spot[1], (spot[2], spot[3]))
         
-        if not terminated:
+        if not self.inside_spot:
             free_spot_color = (255, 0, 0)
         pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
             
@@ -511,12 +513,21 @@ class AbstractCar:
         global free_spot_color
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            # if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
-            green_sound.play()
+            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
+                green_sound.play()
             free_spot_color = (0, 255, 0)
-            inside_spot = True                          
-            terminated = True
-            return terminated, collides, inside_spot
+            inside_spot = True  
+            discrete_vel = round((self.vel + 4) / 10, 3)                        
+            if discrete_vel == 0.4:                    # if the car is stationary in the spot
+                # print(f"Parked & stationary for {self.count} {"frame" if self.count == 1 else "frames"}", end = " ")
+                if self.count < 40:                 # if the car has been stationary for less than 40 frames, increment the counter
+                    self.count += 1
+                else:   # else if the car has been stationary for 40 frames, stop the game
+                    terminated = True
+                    self.count = 1
+                    return terminated, collides, inside_spot
+            else:
+                self.count = 1                      # if the car is not stationary, reset the counter
         else:
             free_spot_color = (255, 0, 0)
             self.count = 1
@@ -809,7 +820,7 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
     model = TD3.load(model_path, env=env, device="cuda")  
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(9, test_episodes+9):
         terminated = False
         truncated = False
         total_reward = 0
@@ -862,4 +873,4 @@ if __name__ == '__main__':
             
     # Train/test using TD3
     # train_TD3(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_TD3(3, run=10, steps_trained=1500000, render=True)
+    test_TD3(100, run="15H", steps_trained=2000000, render=True)

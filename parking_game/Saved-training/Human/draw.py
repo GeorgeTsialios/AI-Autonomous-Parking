@@ -345,13 +345,13 @@ class ParkingGameEnv(gym.Env):
         square_colors = ["black", "black", "black", "black"] if not (terminated or truncated) else ["gray", "gray", "gray", "gray"]
         triangle_coordinates = [[(925,588), (917, 602), (933, 602)], [(858,655), (872, 663), (872, 647)], [(916,648), (933, 648), (925, 662)], [(978,663), (978, 647), (992, 655)]]
 
-        if "UP" in self.car.player_action:
+        if not (terminated or truncated) and "UP" in self.car.player_action:
             square_colors[0] = "green"
-        elif "DOWN" in self.car.player_action:
+        elif not (terminated or truncated) and "DOWN" in self.car.player_action:
             square_colors[2] = "green"
-        if "LEFT" in self.car.player_action:
+        if not (terminated or truncated) and "LEFT" in self.car.player_action:
             square_colors[1] = "green"
-        elif "RIGHT" in self.car.player_action:
+        elif not (terminated or truncated) and "RIGHT" in self.car.player_action:
             square_colors[3] = "green"
 
         for i in range(4):
@@ -767,9 +767,9 @@ def test_Human(test_episodes):
         rewards.append(total_reward)
 
     print(f"\nSuccess ratio: {env.unwrapped.successes} / {test_episodes}")
-    print(f"Times list: {env.unwrapped.times_list}")
+    # print(f"Times list: {env.unwrapped.times_list}")
     print(f"Average successful episode time: {np.mean(env.unwrapped.times_list):.3f}")
-    print(f"Collisions list: {env.unwrapped.collisions_list}")
+    # print(f"Collisions list: {env.unwrapped.collisions_list}")
     print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.3f}")
 
 def test_random_agent(test_episodes, render=True):
@@ -804,4 +804,4 @@ if __name__ == '__main__':
             
     # Train/test using A2C
     # train_A2C(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_Human(3)
+    test_Human(10)

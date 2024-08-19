@@ -31,7 +31,7 @@ input-files: [
   3-theory/0-intro.md,
   3-theory/1-artificialIntelligence.md,
   3-theory/2-machineLearning.md,
-  # 3-theory/4-wireframesAndPrototypes.md,
+  3-theory/3-reinforcementLearning.md,
   # 3-theory/5-conclusion.md,
 
   # 4-implementation/0-intro.md,

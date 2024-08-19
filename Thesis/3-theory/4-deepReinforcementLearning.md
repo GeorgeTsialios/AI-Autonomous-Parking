@@ -1,4 +1,5 @@
 
+Deep Q-networks (DQNs): A type of reinforcement learning algorithm that is based on deep learning. It is commonly used for tasks that involve complex environments and large state spaces.
 
 Ωστόσο, τα σύγχρονα προβλήματα εξαιτίας της
 μεγάλης πολυπλοκότητάς τους, έχουν θεσπίσει ορισμένους περιορισμούς ως προς

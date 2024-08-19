@@ -663,12 +663,12 @@ def train_A2C(steps_to_train, render=False, steps_previously_trained=0, run=1):
         policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[16])       # change the policy network architecture to a 3-layer neural network with 128 units each
         model = A2C("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu", policy_kwargs=policy_kwargs)       # Create A2C model, MlpPolicy is a 2-layer neural network with 64 units each
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
-    # print(model.policy) # print the model's network architecture
+    print(model.policy) # print the model's network architecture
 
-    checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'a2c_model-{run}')
+    # checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'a2c_model-{run}')
 
-    model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="A2C", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
-    model.save(f"{models_dir}/a2c_model-{run}_{steps_to_train}_steps.zip")  # Save the model
+    # model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="A2C", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
+    # model.save(f"{models_dir}/a2c_model-{run}_{steps_to_train}_steps.zip")  # Save the model
  
     print(f"Success / episodes: {env.unwrapped.successes} / {steps_to_train / max_steps :.0f}")
 
@@ -738,5 +738,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using A2C
-    # train_A2C(5000000, render=False, steps_previously_trained=0, run=5)
-    test_A2C(10, run=5, steps_trained=1750000, render=True)
+    train_A2C(5000000, render=False, steps_previously_trained=0, run=5)
+    # test_A2C(10, run=5, steps_trained=1750000, render=True)

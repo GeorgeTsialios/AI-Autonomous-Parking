@@ -40,5 +40,59 @@
         "verbosity": "INFO",
         "for": "3-theory/figures/test.png",
         "from": "3-theory/figures/test.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/RLCycle.png",
+        "from": "3-theory/figures/RLCycle.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/Markov_Decision_Process.png",
+        "from": "3-theory/figures/Markov_Decision_Process.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/test2.png",
+        "from": "3-theory/figures/test2.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/rl_algorithms2.png",
+        "from": "3-theory/figures/rl_algorithms2.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/rl-taxonomy.svg",
+        "from": "3-theory/figures/rl-taxonomy.svg"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/Q-Table.png",
+        "from": "3-theory/figures/Q-Table.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/epsilon-greedy.png",
+        "from": "3-theory/figures/epsilon-greedy.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/FrozenLake.png",
+        "from": "3-theory/figures/FrozenLake.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/Q-Table-FrozenLake.png",
+        "from": "3-theory/figures/Q-Table-FrozenLake.png"
     }
 ]

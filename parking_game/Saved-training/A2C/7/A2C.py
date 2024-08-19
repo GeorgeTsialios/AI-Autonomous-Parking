@@ -688,7 +688,7 @@ def test_A2C(test_episodes, run=1, steps_trained=0, render=True):
         state = env.reset(seed=episode)[0]
 
         while not terminated and not truncated:
-            action,_ = model.predict(state)
+            action,_ = model.predict(state, deterministic=True)
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
             print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
