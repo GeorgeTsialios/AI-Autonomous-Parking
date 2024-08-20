@@ -680,12 +680,12 @@ def train_SAC(steps_to_train, render=False, steps_previously_trained=0, run=1):
         # policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[128, 128, 128])       # change the policy network architecture to a 3-layer neural network with 128 units each
         model = SAC("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="auto")       # Create SAC model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
-    # print(model.policy) # print the model's network architecture
+    print(model.policy) # print the model's network architecture
 
-    checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'sac_model-{run}')
+    # checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'sac_model-{run}')
 
-    model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="SAC", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
-    model.save(f"{models_dir}/sac_model-{run}_{steps_to_train}_steps.zip")  # Save the model
+    # model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="SAC", reset_num_timesteps=steps_previously_trained<=0)  # Train the model
+    # model.save(f"{models_dir}/sac_model-{run}_{steps_to_train}_steps.zip")  # Save the model
  
     print(f"Success / episodes: {env.unwrapped.successes} / {steps_to_train / max_steps :.0f}")
 
@@ -755,5 +755,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using SAC
-    # train_SAC(7000000, render=False, steps_previously_trained=0, run=5)
-    test_SAC(1000, run=5, steps_trained=2550000, render=True)
+    train_SAC(7000000, render=False, steps_previously_trained=0, run=5)
+    # test_SAC(1000, run=5, steps_trained=2550000, render=True)
