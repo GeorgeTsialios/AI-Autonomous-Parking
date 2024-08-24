@@ -86,6 +86,12 @@
     {
         "type": "LoadedResource",
         "verbosity": "INFO",
+        "for": "3-theory/figures/Q-Learning-pseudocode.pdf",
+        "from": "3-theory/figures/Q-Learning-pseudocode.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
         "for": "3-theory/figures/FrozenLake.png",
         "from": "3-theory/figures/FrozenLake.png"
     },
@@ -94,5 +100,77 @@
         "verbosity": "INFO",
         "for": "3-theory/figures/Q-Table-FrozenLake.png",
         "from": "3-theory/figures/Q-Table-FrozenLake.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/QLearningVsDQN.png",
+        "from": "3-theory/figures/QLearningVsDQN.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/BiologicalVsArtificialNN.png",
+        "from": "3-theory/figures/BiologicalVsArtificialNN.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/Tanh.pdf",
+        "from": "3-theory/figures/Tanh.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/ReLU.pdf",
+        "from": "3-theory/figures/ReLU.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/DeepNeuralNetwork.png",
+        "from": "3-theory/figures/DeepNeuralNetwork.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/ActorCritic.png",
+        "from": "3-theory/figures/ActorCritic.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/Algorithms-usage.png",
+        "from": "3-theory/figures/Algorithms-usage.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/PPO-usage.png",
+        "from": "3-theory/figures/PPO-usage.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/PPO-pseudocode.pdf",
+        "from": "3-theory/figures/PPO-pseudocode.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/DDPG-pseudocode.pdf",
+        "from": "3-theory/figures/DDPG-pseudocode.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/TD3-pseudocode.pdf",
+        "from": "3-theory/figures/TD3-pseudocode.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "3-theory/figures/SAC-pseudocode.pdf",
+        "from": "3-theory/figures/SAC-pseudocode.pdf"
     }
 ]

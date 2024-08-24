@@ -1,9 +1,3 @@
-Proximal Policy Optimization (PPO)
-
-Learning Mechanism: A policy gradient method that optimizes a surrogate objective function to prevent the policy from changing too much at each iteration, enhancing training stability.
-Strengths: Strikes a balance between sample efficiency, ease of implementation, and training stability. Works well in both discrete and continuous action spaces.
-Limitations: Can be slower to converge in environments with very high-dimensional action spaces.
-Use Cases: Suitable for a wide range of problems, from robotic control to playing complex games like Dota 2.
 
 ---------------------------------------------------ΚΕΦΑΛΑΙΟ 4 ΠΑΙΧΝΙΔΙ---------------------------------------------------------------------
 
