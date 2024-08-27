@@ -172,5 +172,53 @@
         "verbosity": "INFO",
         "for": "3-theory/figures/SAC-pseudocode.pdf",
         "from": "3-theory/figures/SAC-pseudocode.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/trackmania.png",
+        "from": "4-game/figures/trackmania.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/gamescreen.png",
+        "from": "4-game/figures/gamescreen.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/tools.png",
+        "from": "4-game/figures/tools.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/parking-lot-border-2.png",
+        "from": "4-game/figures/parking-lot-border-2.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/black-rectangle.png",
+        "from": "4-game/figures/black-rectangle.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/free-spot-border-2.png",
+        "from": "4-game/figures/free-spot-border-2.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/parking-lot-spawns.png",
+        "from": "4-game/figures/parking-lot-spawns.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "4-game/figures/raycasting3.png",
+        "from": "4-game/figures/raycasting3.png"
     }
 ]

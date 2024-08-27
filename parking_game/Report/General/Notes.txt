@@ -1,9 +1,3 @@
-
----------------------------------------------------ΚΕΦΑΛΑΙΟ 4 ΠΑΙΧΝΙΔΙ---------------------------------------------------------------------
-
-- In the video, the parking spot was predetermined. It would be more realistic to have a set starting point for the car, with one random empty parking spot. This way we avoid overfitting and achieve generalization to other parking spots. However, this will increase training time. Another approach would be to train the model just like in this video and then train it on other parking spots. That is called Transfer learning.
-Overfitting is always a concern in RL. It depends on what your overall goal is. If your goal is to create a realistic automated parking assistant, you need to randomize the car spawn, the parking spot and even the parking lot shape, add parallel parking, pedestrians, other moving cars etc.
-
 ----------------------------------------------------ΚΕΦΑΛΑΙΟ 5 ΕΚΠΑΙΔΕΥΣΗ-----------------------------------------------------------------
 
 
