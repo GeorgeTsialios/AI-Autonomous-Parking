@@ -42,7 +42,7 @@ Training 6 <- 5B)
 
 Training 8 <- 7)
 
-(8A) Δοκιμάζω Curriculum Learning με το μοντέλο των 5.3M steps της εκπαίδευσης 7. Ωστόσο, μετά από 1Μ steps το sucess rate συγκλίνει στο 0. Εξετάζοντας τον πράκτορα, παρατηρώ ότι μένει συχνά ακίνητος.
+(8A) Δοκιμάζω Curriculum Learning με το μοντέλο των 5.3M steps της εκπαίδευσης 7. Ωστόσο, μετά από 1Μ steps το sucess rate συγκλίνει στο 0. Εξετάζοντας τον πράκτορα, παρατηρώ ότι μένει συχνά ακίνητος. (8Β)
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				RANDOM Spot Spawn (ΟΠΟΙΟΔΗΠΟΤΕ RECTANGLE), RANDOM Car Spawn, NORMAL Parking
@@ -66,4 +66,4 @@ Training 12 <- 10)
 
 Training 13 <- 11)
 
-(13Α) Αυξάνω το punishment for collision από -1000 σε -2000 και εφαρμόζω Curriculum Learning με το μοντέλο των 7.3Μ steps της εκπαίδευσης 11 (83% success rate). Ωστόσο, μετά από 1.5Μ steps, το success rate κυμαίνεται στο 25%. (13Β)  Αυξάνω το punishment for collision από -1000 σε -1300 και εφαρμόζω Curriculum Learning με το μοντέλο των 7.3Μ steps της εκπαίδευσης 11 (83% success rate).
+(13Α) Αυξάνω το punishment for collision από -1000 σε -2000 και εφαρμόζω Curriculum Learning με το μοντέλο των 7.3Μ steps της εκπαίδευσης 11 (83% success rate). Ωστόσο, μετά από 1.5Μ steps, το success rate κυμαίνεται στο 25%. (13Β)  Αυξάνω το punishment for collision από -1000 σε -1300 και εφαρμόζω Curriculum Learning με το μοντέλο των 7.3Μ steps της εκπαίδευσης 11 (83% success rate). Μετά από 11Μ steps, το success rate τείνει στο 75%.
