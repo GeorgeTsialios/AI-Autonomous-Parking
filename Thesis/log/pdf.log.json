@@ -220,5 +220,137 @@
         "verbosity": "INFO",
         "for": "4-game/figures/raycasting3.png",
         "from": "4-game/figures/raycasting3.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/tools.png",
+        "from": "5-training/figures/tools.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/Stats-number-trainings.png",
+        "from": "5-training/figures/Stats-number-trainings.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/Stats-training-duration.png",
+        "from": "5-training/figures/Stats-training-duration.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/Expectation-vs-reality.png",
+        "from": "5-training/figures/Expectation-vs-reality.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/sensitivity.png",
+        "from": "5-training/figures/sensitivity.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/reward-hacking-funny.png",
+        "from": "5-training/figures/reward-hacking-funny.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/reward-hacking.png",
+        "from": "5-training/figures/reward-hacking.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/suboptimal.png",
+        "from": "5-training/figures/suboptimal.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/NN-discrete.png",
+        "from": "5-training/figures/NN-discrete.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/NN-continuous.png",
+        "from": "5-training/figures/NN-continuous.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/rf1-instant.pdf",
+        "from": "5-training/figures/rf1-instant.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/rf2-instant.pdf",
+        "from": "5-training/figures/rf2-instant.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/rf2-normal.pdf",
+        "from": "5-training/figures/rf2-normal.pdf"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/discretization2.png",
+        "from": "5-training/figures/discretization2.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/epsilon.png",
+        "from": "5-training/figures/epsilon.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/QL1.png",
+        "from": "5-training/figures/QL1.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/QL2.png",
+        "from": "5-training/figures/QL2.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/QL3.png",
+        "from": "5-training/figures/QL3.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/PPO-best-training.png",
+        "from": "5-training/figures/PPO-best-training.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/SAC-best-training.png",
+        "from": "5-training/figures/SAC-best-training.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/TD3-best-training.png",
+        "from": "5-training/figures/TD3-best-training.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "5-training/figures/DDPG-best-training.png",
+        "from": "5-training/figures/DDPG-best-training.png"
     }
 ]

@@ -39,24 +39,26 @@ input-files: [
   4-game/1-reason.md,
   4-game/2-rules.md,
   4-game/3-making.md,
-  # 4-game/4-localStorageAndBlob.md,
-  # 4-game/5-authentication.md,
-  # 4-game/6-server.md,
-  # 4-game/7-conclusion.md,
 
-  # 5-evaluation/0-intro.md,
-  # 5-evaluation/1-ux.md,
-  # 5-evaluation/1.5-methods.md,
-  # 5-evaluation/2-cognitiveWalkthrough.md,
-  # 5-evaluation/3-klm.md,
-  # 5-evaluation/4-userBased.md,
-  # 5-evaluation/5-algorithm.md,
+  5-training/0-intro.md,
+  5-training/1-goals.md,
+  5-training/2-tools.md,
+  5-training/3-compute.md,
+  5-training/4-statistics.md,
+  5-training/5-difficulties.md,
+  5-training/6-tips.md,
+  5-training/7-modelling.md,
+  5-training/8-Q-Learning.md,
+  5-training/9-PPO.md,
+  5-training/10-SAC.md,
+  5-training/11-TD3.md,
+  5-training/12-DDPG.md,
 
-  # 6-conclusion/0-intro.md,
+  6-evaluation/0-intro.md,
+
+  7-future-work/0-intro.md,
   
-  # bibliography/bibliography.md,
-
-  # A-appendix/appendix.md,
+  bibliography/bibliography.md,
 ]
 
 log-file: log/pdf.log.json
