@@ -62,8 +62,8 @@
     {
         "type": "LoadedResource",
         "verbosity": "INFO",
-        "for": "3-theory/figures/rl_algorithms2.png",
-        "from": "3-theory/figures/rl_algorithms2.png"
+        "for": "3-theory/figures/rl_algorithms.png",
+        "from": "3-theory/figures/rl_algorithms.png"
     },
     {
         "type": "LoadedResource",
@@ -352,5 +352,65 @@
         "verbosity": "INFO",
         "for": "5-training/figures/DDPG-best-training.png",
         "from": "5-training/figures/DDPG-best-training.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/training-time3.png",
+        "from": "6-evaluation/figures/training-time3.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/training-time4.png",
+        "from": "6-evaluation/figures/training-time4.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/success3.png",
+        "from": "6-evaluation/figures/success3.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/collisions3.png",
+        "from": "6-evaluation/figures/collisions3.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/time3.png",
+        "from": "6-evaluation/figures/time3.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/score3.png",
+        "from": "6-evaluation/figures/score3.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/success4.png",
+        "from": "6-evaluation/figures/success4.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/collisions4.png",
+        "from": "6-evaluation/figures/collisions4.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/time4.png",
+        "from": "6-evaluation/figures/time4.png"
+    },
+    {
+        "type": "LoadedResource",
+        "verbosity": "INFO",
+        "for": "6-evaluation/figures/score4.png",
+        "from": "6-evaluation/figures/score4.png"
     }
 ]

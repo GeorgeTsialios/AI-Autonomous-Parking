@@ -55,6 +55,9 @@ input-files: [
   5-training/12-DDPG.md,
 
   6-evaluation/0-intro.md,
+  6-evaluation/1-time.md,
+  6-evaluation/2-performance.md,
+  6-evaluation/3-conclusion.md,
 
   7-future-work/0-intro.md,
   

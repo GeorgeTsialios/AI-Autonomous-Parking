@@ -156,7 +156,8 @@ class ParkingGameEnv(gym.Env):
         self.successes = 0
         self.action = ""
         self.collisions_list = []       # number of collisions for each successful parking
-    
+        self.steps_list = []            # number of steps for each successful parking
+
     def initialize_game(car_spawn_index):
         # start_up_sound.play()
 
@@ -243,6 +244,7 @@ class ParkingGameEnv(gym.Env):
             # print("TERMINATED", end=" ")
             info["is_success"] = True
             self.successes += 1
+            self.steps_list.append(self.current_step)
             self.collisions_list.append(self.collisions)
             reward += 5000
 
@@ -730,11 +732,20 @@ def test_SAC(test_episodes, run=1, steps_trained=0, render=True):
         rewards.append(total_reward)
 
     print("\n")
-    for episode in range(1, test_episodes+1):
-        print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
-    print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+    # for episode in range(1, test_episodes+1):
+    #     print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
+    # print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+
     print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
-    print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.3f}")
+    # convert steps_list to times_list, where each element is the time it took to park the car in the corresponding episode
+    times_list = [steps / 20 for steps in env.unwrapped.steps_list]  # 20 fps
+    #print the times list
+    # print(f"Times list: {times_list}")
+    print(f"Average successful episode time: {np.mean(times_list):.2f} seconds")
+    print(f"Standard deviation of successful episode time: {np.std(times_list):.2f} seconds")
+
+    print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.2f}")
+    print(f"Standard deviation of successful episode collisions: {np.std(env.unwrapped.collisions_list):.2f}")
 
 def test_random_agent(test_episodes, render=True):
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
@@ -768,4 +779,4 @@ if __name__ == '__main__':
             
     # Train/test using SAC
     # train_SAC(27000000, render=False, steps_previously_trained=1, run=10)
-    test_SAC(100, run=10, steps_trained=5900000, render=False)
+    test_SAC(100, run=10, steps_trained=6100000, render=False)

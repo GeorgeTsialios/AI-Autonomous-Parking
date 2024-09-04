@@ -157,6 +157,7 @@ class ParkingGameEnv(gym.Env):
         self.successes = 0
         self.action = ""
         self.collisions_list = []       # number of collisions for each successful parking
+        self.steps_list = []            # number of steps for each successful parking
 
     
     def initialize_game(car_spawn_index):
@@ -248,6 +249,7 @@ class ParkingGameEnv(gym.Env):
             info["is_success"] = True
             self.successes += 1
             self.collisions_list.append(self.collisions)
+            self.steps_list.append(self.current_step)
             reward += 5000
             if state[10] < 0.12:
                 print("REVERSE", end=" ")
@@ -730,11 +732,26 @@ def test_DDPG(test_episodes, run=1, steps_trained=0, render=True):
         rewards.append(total_reward)
 
     print("\n")
-    for episode in range(1, test_episodes+1):
-        print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
-    print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+    # for episode in range(1, test_episodes+1):
+    #     print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
+    # print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+
     print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
-    print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.3f}")
+    # convert steps_list to times_list, where each element is the time it took to park the car in the corresponding episode
+    times_list = [steps / 20 for steps in env.unwrapped.steps_list]  # 20 fps
+    #print the times list
+    # print(f"Times list: {times_list}")
+    print(f"Average successful episode time: {np.mean(times_list):.2f} seconds")
+    print(f"Standard deviation of successful episode time: {np.std(times_list):.2f} seconds")
+
+    # save the collisions list, its mean value and its std to a txt file
+    with open(f"{log_dir}/collisions_list.txt", "a") as f:
+        f.write(f"Collisions list: {env.unwrapped.collisions_list}\n")
+        f.write(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.2f}\n")
+        f.write(f"Standard deviation of successful episode collisions: {np.std(env.unwrapped.collisions_list):.2f}\n")
+
+    print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.2f}")
+    print(f"Standard deviation of successful episode collisions: {np.std(env.unwrapped.collisions_list):.2f}")
 
 def test_random_agent(test_episodes, render=True):
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
@@ -768,4 +785,4 @@ if __name__ == '__main__':
             
     # Train/test using DDPG
     # train_DDPG(27000000, render=False, steps_previously_trained=1, run=4)
-    test_DDPG(100, run=4, steps_trained=1900000, render=False)
+    test_DDPG(100, run=4, steps_trained=1550000, render=False)

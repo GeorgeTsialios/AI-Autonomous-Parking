@@ -24,25 +24,27 @@ abstract-en:
     - In this context, the goal of this thesis is to train Artificial Intelligence agents in a simple game using different algorithms and compare them in terms of training time and final performance. More specifically, a game was developed in which the agent is tasked with parking a car in a random parking spot. The following algorithms -which belong to the Machine Learning subcategory called Reinforcement Learning- were used&#58; Q-learning, Proximal Policy Optimization (PPO), Soft Actor Critic (SAC), Deep Deterministic Policy Gradient (DDPG) and Twin Delayed Deep Deterministic Policy Gradient (TD3).
     - The code developed for the implementation of the game and the training of the agents is publicly available at the following link&#58; [GitHub Repository](https://github.com/GeorgeTsialios/Thesis).
 acknowlegements:
-    - Φτάνοντας στο τέλος της ακαδημαϊκής μου σταδιοδρομίας, θα ήθελα να ευχαριστήσω όλους όσους με βοήθησαν, έμπρακτα αλλά και όχι μόνο, τα τελευταία πέντε έτη των σπουδών μου.
+    - Ολοκληρώνοντας την ακαδημαϊκή μου σταδιοδρομία, θα ήθελα να ευχαριστήσω όλους όσους με βοήθησαν, έμπρακτα αλλά και όχι μόνο, τα τελευταία πέντε έτη των σπουδών μου.
     - Αρχικά, επιθυμώ να ευχαριστήσω τον επιβλέποντα της διπλωματικής μου εργασίας, κο Κυριάκο Σγάρμπα, ο οποίος μου έδωσε την ευκαιρία να ασχοληθώ με ένα τόσο ενδιαφέρον ερευνητικό πεδίο. Ακόμα, η εμπιστοσύνη που μου έδειξε και η καθοδήγηση του έπαιξαν καθοριστικό ρόλο στην ομαλή εκπόνηση της παρούσας εργασίας. 
-    - Στη συνέχεια, θα ήθελα να ευχαριστήσω θερμά την οικογένεια και τους φίλους μου για την συνεχή στήριξη που μου προσφέρουν. Ειδική αναφορά επιθυμώ να κάνω σε δύο άτομα, στα οποία οφείλω, σε μεγάλο βάθμο, τη μέχρι τώρα πορεία μου. Αρχικά, ευχαριστώ τον πατέρα μου, Ιωάννη, για τη μόνιμη υποστήριξη και την ανεκτίμητη συμπαράσταση του. Έπειτα, ευχαριστώ τον εξαιρετικό συνάδελφο και φίλο, Χρήστο Κατσανδρή, ο οποίος αποτέλεσε για εμένα παράδειγμα προς μίμηση και με ενέπνευσε να γίνω καλύτερος. Η αδιάλειπτη προθυμία του να βοηθήσει αποδείχθηκε πολύτιμη πολλές φορές, ενώ η συνεργασία μας σε διάφορα μαθήματα και εργασίες ήταν χαρά και τιμή μου.
+    - Στη συνέχεια, θα ήθελα να ευχαριστήσω θερμά την οικογένεια και τους φίλους μου για την συνεχή στήριξη που μου προσφέρουν. Ειδική αναφορά επιθυμώ να κάνω σε δύο άτομα, στα οποία οφείλω, σε μεγάλο βάθμο, τη μέχρι τώρα πορεία μου. Αρχικά, ευχαριστώ τον πατέρα μου, Ιωάννη, για τη μόνιμη υποστήριξη και την ανεκτίμητη συμπαράσταση του. Έπειτα, ευχαριστώ τον εξαιρετικό συνάδελφο και φίλο, Χρήστο Κατσανδρή, ο οποίος με ενέπνευσε σημαντικά, να γίνω καλύτερος. Η αδιάλειπτη προθυμία του να βοηθήσει αποδείχθηκε πολύτιμη πολλές φορές, ενώ η συνεργασία μας σε διάφορα μαθήματα και εργασίες ήταν χαρά και τιμή μου.
 keywords-el:
     - Τεχνητή Νοημοσύνη
     - Μηχανική Μάθηση
     - Βαθιά Ενισχυτική Μάθηση
     - Νευρωνικά Δίκτυα
+    - Σύγκριση αλγορίθμων
     - Αυτοδηγούμενα οχήματα
     - OpenAI Gymnasium
-    - Stable Baselines 3
+    - Stable-Baselines 3
 keywords-en:
     - Artificial Intelligence
     - Machine Learning
     - Deep Reinforcement Learning
     - Neural Networks
+    - Algorithm comparison
     - Self-driving cars
     - OpenAI Gymnasium
-    - Stable Baselines 3
+    - Stable-Baselines 3
 lang: el-GR
 book: true
 toc-own-page: true

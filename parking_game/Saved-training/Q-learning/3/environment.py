@@ -625,7 +625,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
 
     start_time = time.time()          
 
-    for episode in range(episodes_previously_trained+1, total_episodes):
+    for episode in range(episodes_previously_trained, total_episodes):
         
         state = env.reset(seed=32)[0]          # Reset environment at the beginning of episode
         # print(f"State: {state}")
@@ -787,5 +787,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    train_q(5000, render=False, episodes_previously_trained=0, checkpoint=100)
+    train_q(1000, render=False, episodes_previously_trained=0, checkpoint=10000)
     # test_q(10, 40000, render=True)

@@ -660,17 +660,19 @@ def train_PPO(steps_to_train, render=False, steps_previously_trained=0, run=1):
 
     if steps_previously_trained > 0:
         model_path = f"{models_dir}/ppo_model-{run}_{steps_previously_trained}_steps.zip"
-        model = PPO.load(model_path, env=env, tensorboard_log=log_dir, device="cpu")  # Load the model
+        model = PPO.load(model_path, env=env, tensorboard_log=log_dir, device="cuda")  # Load the model
     else:
         # policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[128, 128, 128])       # change the policy network architecture to a 3-layer neural network with 128 units each
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cpu", ent_coef=0.01)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
+        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, device="cuda", ent_coef=0.01)       # Create PPO model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
                                                                                               # Change device to "cuda" for GPU training or "cpu" for CPU training
     # print(model.policy) # print the model's network architecture
 
     checkpoint_callback = CheckpointCallback(save_freq=100000, save_path=models_dir, name_prefix=f'ppo_model-{run}')
 
+    t_start = time.time()
     model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="PPO", reset_num_timesteps=True)  # Train the model
     model.save(f"{models_dir}/ppo_model-{run}_{steps_to_train}_steps.zip")  # Save the model
+    print(f"Training time: {time.time() - t_start:.2f} seconds")
  
     print(f"Success / episodes: {env.unwrapped.successes} / {steps_to_train / max_steps :.0f}")
 
@@ -741,5 +743,5 @@ if __name__ == '__main__':
     # test_random_agent(10, render=True)
             
     # Train/test using PPO
-    train_PPO(250000000, render=False, steps_previously_trained=1, run='69C')
+    train_PPO(600000, render=False, steps_previously_trained=0, run='lol')
     # test_PPO(100, run='69B', steps_trained=40000000, render=True)

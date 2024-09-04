@@ -6,33 +6,30 @@
 # There will be collision detection between the player car and the other cars, as well as the parking lot borders and a garden (depicted as a rectangle
 # in the middle part of the parking lot). The car will have 8 depth sensors (radars), which will detect the distance to the nearest object (or window borders) in 8 directions.
 # The radars will be drawn on the screen as lines.
-# The player car will be controlled by an AI agent, which will use TD3 to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
-# The agent's states will consist of the 8 depth sensors, the offset between the center of the car and the center of the parking spot in the x axis, the offset between the center of the car and the center of the parking spot in the y axis, the velocity of the car, the angle of the car. However, these features will be discretized into a smaller number of bins. This way we can reduce the state space size. 
+# The player car will be controlled by an AI agent, which will use Q-learning to learn how to park the car in the parking spot. The agent will have 9 actions: move forward, move backward, turn left, turn right, move forward and turn left, move forward and turn right, move backward and turn left, move backward and turn right, do nothing. 
+# The agent's states will consist of the 8 depth sensors, the velocity of the car, the angle of the car and the distance between the center of the car and the center of the parking spot. However, these features will be discretized into a smaller number of bins. This way we can reduce the state space size. 
+# The agent will have a Q-table, which will be updated after each action. The agent will have a reward system, which will give a reward of 100 if the car is parked in the parking spot, and -20 if the car collides with an object or goes out of the window. The agent will have a discount factor of 0.9 and a learning rate of 0.1. The agent will have an epsilon value of 0.1, which will be used for epsilon-greedy exploration. The agent will have a maximum of 400 episodes to learn how to park the car.
 
 
-import os
+import ast
 import pygame
 import time
 import math
 import sys
 import random
+import bisect
+import matplotlib.pyplot as plt
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.envs.registration import register
+from gymnasium.utils.env_checker import check_env
 from enum import Enum
-from stable_baselines3 import TD3
-from stable_baselines3.common.callbacks import CheckpointCallback
-from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv
-import torch as th
-
 
 # Register this module as a gym environment. Once registered, the id is usable in gym.make().
 register(
     id='parking-game-v0',                          
-    entry_point='TD3:ParkingGameEnv', # module_name:class_name
+    entry_point='environment:ParkingGameEnv', # module_name:class_name
 )
 
 pygame.mixer.init()
@@ -51,11 +48,8 @@ def scale_image(img, factor):
     size = round(img.get_width() * factor), round(img.get_height() * factor)        # size is a tuple of 2 integers, the new width and height of the image
     return pygame.transform.scale(img, size)  
 
-pygame.font.init()      # Initialize the font module, essential for rendering text on the screen
-SMALL_FONT = pygame.font.SysFont("gadugi", 16, False, False)    # Select text font, size, bold, italic.
-LARGE_FONT = pygame.font.SysFont("gadugi", 22, False, False) 
 
-PARKING_LOT = pygame.image.load("parking_game/imgs/stats/parking-lot-stats.png")
+PARKING_LOT = pygame.image.load("parking_game/imgs/parking-lot.png")
 GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
 GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
 
@@ -89,38 +83,6 @@ FREE_SPOT_BORDER_MASK = None
 PARKING_LOT_BORDER_MASK = None
 
 
-class SkipEnv(gym.Wrapper[np.ndarray, int, np.ndarray, int]):
-    """
-    Return only every ``skip``-th frame (frameskipping)
-
-    :param env: Environment to wrap
-    :param skip: Number of ``skip``-th frame
-        The same action will be taken ``skip`` times.
-    """
-
-    def __init__(self, env: gym.Env, skip: int = 4) -> None:
-        super().__init__(env)
-        assert env.observation_space.dtype is not None, "No dtype specified for the observation space"
-        assert env.observation_space.shape is not None, "No shape defined for the observation space"
-        self._skip = skip
-
-    def step(self, action: int):
-        """
-        Step the environment with the given action
-        Repeat action, sum reward, and observe the final state.
-        
-        :param action: the action
-        :return: observation, reward, terminated, truncated, information
-        """
-        total_reward = 0.0
-        for _ in range(self._skip):
-            obs, reward, terminated, truncated, info = self.env.step(action)
-            total_reward += reward
-            if terminated:
-                break
-
-        return obs, total_reward, terminated, truncated, info
-
 
 class ParkingGameEnv(gym.Env):
     # metadata is a required attribute
@@ -133,37 +95,27 @@ class ParkingGameEnv(gym.Env):
         self.render_mode = render_mode
 
         # Initialize the Parking problem
-        self.car = AgentCar(6, fps=self.metadata['render_fps'])
+        self.car = AgentCar(2, fps=self.metadata['render_fps'])
         # self.car = PlayerCar(6, fps=self.metadata['render_fps'])            # change to this to control the car with arrow keys
 
         # Gym requires defining the action space. The action space is the agent's set of possible actions.
         # Training code can call action_space.sample() to randomly select an action. 
-        self.action_space = spaces.Box(
-            low = np.array([-1, -1]),
-            high = np.array([1,  1]),
-            shape = (2,),
-            dtype = np.float16)
+        self.action_space = spaces.Discrete(len(AgentAction))
 
         # Gym requires defining the observation space. The observation space consists of the agent's set of possible positions.
         # The observation space is used to validate the observation returned by reset() and step().
-        # Use a 1D vector: [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
-        self.observation_space = spaces.Box(                                                # Box for continuous observation space
-            low = np.array([-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]),
-            high = np.array([1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1]),
-            shape = (12,),
-            dtype = np.float16
+        # Use a 1D vector: [radar0, radar1, radar2, radar3, offset_x, offset_y, velocity, angle]
+        self.observation_space = spaces.Box(
+            low = np.array([0, 0, 0, 0, -1, -1, -1, -3]),
+            high = np.array([1, 1, 1, 1, 1, 1, 1, 3]),
+            shape = (8,),
+            dtype = np.int8
         )
 
         self.clock = pygame.time.Clock()
-        self.max_steps = 600
-        self.successes = 0
-        self.times_list = []            # times for each successful parking
-        self.collisions_list = []       # number of collisions for each successful parking
-        self.action = ""
-        self.steps_value = 1
     
     def initialize_game(car_spawn_index):
-        start_up_sound.play()
+        # start_up_sound.play()
 
         random.shuffle(cars)
         global parking_spots
@@ -182,7 +134,7 @@ class ParkingGameEnv(gym.Env):
                         9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                         10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-        free_spot_index = random.randint(1,10)     # the free spot will be randomly chosen at the beginning of each game
+        free_spot_index = random.randint(1,10)    # the free spot will be randomly chosen at the beginning of each game
         # print(f"Free spot: {free_spot_index}")
         parking_spots.pop(free_spot_index)
 
@@ -203,16 +155,10 @@ class ParkingGameEnv(gym.Env):
         # Reset the Parking Optionally, pass in seed control randomness and reproduce scenarios.
         self.car.reset(seed=seed)
 
-        self.current_step = 0
-
         # Construct the observation state:
-       # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
-        self.state = list(self.car.discretize_state())
-        obs = np.array(self.state).astype(np.float16)
-
-        self.reward = 0
-        self.collisions = 0
-        self.inside_spot = False
+       # [radar0, radar1, radar2, radar3, offset_x, offset_y, velocity, angle]
+        state = list(self.car.discretize_state())
+        obs = np.array(state).astype(np.int8)
         
         # Additional info to return. For debugging or whatever.
         info = {}
@@ -223,104 +169,60 @@ class ParkingGameEnv(gym.Env):
     # Gym required function (and parameters) to perform an action
     def step(self, action):
 
-        # Additional info to return. For debugging
-        info = {}
-
-        self.action = ""
-        self.action = self.name_action(action)
-        # Render environment
-        if(self.render_mode == 'human'):
-            self.render()                   # Render the environment using previous state, reward but current action. This way we show the aprropriate input-output of the NN.
-
-        for event in pygame.event.get():            
-            if event.type == pygame.QUIT:       # If the user closes the window, the game stops
-                pygame.quit()
-                sys.exit()
-
-        self.current_step += 1
         self.car.check_radars(PARKING_LOT_BORDER_MASK)
-        self.car.move_player(action)                            
+        self.car.move_player(AgentAction(action))           # Perform action
         # self.car.move_player()                            # Change to this to control the car with arrow keys
-        terminated, collides, self.inside_spot = self.car.check_collision()
+        terminated, collides, inside_spot = self.car.check_collision()
 
         # Construct the observation state:
-        # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
-        self.state = list(self.car.discretize_state())
-        obs = np.array(self.state).astype(np.float16)
+        # [radar0, radar1, radar2, radar3, offset_x, offset_y, velocity, angle]
+        state = list(self.car.discretize_state())
+        obs = np.array(state).astype(np.int8)
     
-        # Calculate reward
-        self.reward = 0
+        # Determine reward and termination
+        reward = 0
+
+        reward += self.car.difference * 0.3        # reward/ punishment for getting closer/ further from the center of the parking spot
 
         if terminated:
-            # print("TERMINATED", end=" ")
-            info["is_success"] = True
-            self.successes += 1
-            self.times_list.append(self.current_step/20)
-            self.collisions_list.append(self.collisions)
-            self.reward += 10000
-            if self.render_mode == 'human':
-                self.render(terminated = True)
-
-        elif self.inside_spot:
-            if self.state[10] >= 0.4:                                               # extra reward for parking moving forward
-                self.reward += 10 / (abs(self.state[10] - 0.4) + 1)                      # reward for being inside the parking spot
-            else:
-                self.reward += 5 / (abs(self.state[10] - 0.4) + 1)
-            if self.state[10] == 0.4:                   # extra reward for being stationary
-                # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
-                self.reward += 10
-
-        else:
-            # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
-            self.reward -= abs(self.state[8] - 0.5) * 6
-            self.reward -= abs(self.state[9] - 0.5) * 6
-
-            if self.state[10] > 0.5:
-                self.reward += 1
-
-            if collides:
-                self.collisions += 1
-                self.reward -= 6000             # punish the car for colliding with an object
-
-            if abs(self.state[8] - 0.5) >= 0.1 or abs(self.state[9] - 0.5) >= 0.1:    # when the car is far away from the parking spot
-                if self.state[10] > 0.25 and self.state[10] < 0.55:    # punish the car for moving too slow
-                     # print("BEING STATIONARY FAR AWAY PARKING SPOT", end=" ")
-                    self.reward -= 8
-                    if self.state[10] == 0.4:
-                        self.reward -= 8
-            else:                     # when the car is near the parking spot
-                if self.state[10] > 0.35 and self.state[10] < 0.45:    # punish the car for moving too slow
-                     # print("BEING STATIONARY NEAR PARKING SPOT", end=" ")
-                    self.reward -= 5
-                    if self.state[10] == 0.4:
-                        self.reward -= 8
-                if (self.state[11] > 0.98 or self.state[11] < 0.02) or (self.state[11] > 0.48 and self.state[11] < 0.52):      # reward the car for being in the right angle
-                    self.reward += 0.5
+            reward += 200    
+        elif state[4] == 0 or state[5] == 0:
+            reward += 0.1
+            if state[4] == 0 and state[5] == 0:         # reward the car for being in the center of the parking spot
+                reward += 0.1
+                if state[7] == 0:                       # reward the car for having the right angle
+                    reward += 1
+                    if state[6] == 0:                   # reward the car for being stationary in the center of the parking spot
+                        reward += 1
         
-        if self.current_step >= self.max_steps:
-            if self.render_mode == 'human':
-                self.render(truncated = True)
-            info["is_success"] = False
-            truncated = True
-            terminated = True
-            info['truncated'] = True
         else:
-            truncated = False
-            info['truncated'] = False
+                reward -= 0.1        # passive punishment for not parking
+                if state[6] == 0:    # punish the car for standing still when it has not parked
+                    reward -= 0.4
+                for radar in self.car.radars:
+                    if radar[1] == 1:
+                        reward -= 0.5          # punish the car for being too close to an object
+                if collides:
+                    reward -= 5              # punish the car for colliding with an object
+        
+        # Additional info to return. For debugging or whatever.
+        info = {}
 
-        # Return observation, reward, terminated, truncated, info
-        return obs, self.reward, terminated, truncated, info
+        # Render environment
+        if(self.render_mode == 'human'):
+            # print(AgentAction(action))
+            self.render()
+
+        # Return observation, reward, terminated, truncated (not used), info
+        return obs, reward, terminated, False, info
     
     # Gym required function to render environment
-    def render(self, terminated=False, truncated=False):
-        global free_spot_color
+    def render(self):
         WIN.blit(PARKING_LOT, (0, 0))
 
         for index, spot in parking_spots.items():
             WIN.blit(spot[1], (spot[2], spot[3]))
         
-        if not self.inside_spot:
-            free_spot_color = (255, 0, 0)
         pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
             
         self.car.draw()
@@ -328,109 +230,9 @@ class ParkingGameEnv(gym.Env):
         if intersection is not None:
             pygame.draw.rect(WIN, (255, 0, 0), intersection)            # draw a red rectangle around the point of intersection
 
-        Algorithm_text = LARGE_FONT.render(f"Algorithm", 1, "white")   # 1 is the anti-aliasing level, keep it 1 for better quality
-        WIN.blit(Algorithm_text, (780, 12))          
-        Semicolon_large_text = LARGE_FONT.render(f":", 1, "white")   
-        WIN.blit(Semicolon_large_text, (920, 12))    
-        TD3_text = LARGE_FONT.render(f"TD3", 1, "white") 
-        WIN.blit(TD3_text, (939, 12))
-
-        Steps_trained_text = LARGE_FONT.render(f"Steps trained", 1, "white")   # 1 is the anti-aliasing level, keep it 1 for better quality
-        WIN.blit(Steps_trained_text, (780, 43))          
-        WIN.blit(Semicolon_large_text, (920, 43))    
-        Steps_valuetext = LARGE_FONT.render(f"{self.steps_value}", 1, "white") 
-        WIN.blit(Steps_valuetext, (939, 43))  
-
-        pygame.draw.line(WIN, "white", (750, 87), (1100, 87), 1)    
-
-        Step_text = LARGE_FONT.render(f"Step", 1, "white")   
-        WIN.blit(Step_text, (780, 102))
-        WIN.blit(Semicolon_large_text, (830, 102))  
-        if not terminated:
-            step_to_print = self.current_step - self.current_step % 4               # print the step every 4 frames because of the frameskip = 4
-        else:
-            step_to_print = self.current_step
-        Current_step_text = LARGE_FONT.render(f"{step_to_print}", 1, "white")   
-        WIN.blit(Current_step_text, (849, 102))
-
-        Time_text = LARGE_FONT.render(f"Time", 1, "white")   
-        WIN.blit(Time_text, (928, 102))
-        WIN.blit(Semicolon_large_text, (981, 102))    
-        Time_value_text = LARGE_FONT.render(f"{self.current_step/20:.2f}s", 1, "white")   
-        WIN.blit(Time_value_text, (1000, 102))        
-
-        Inputs_text = LARGE_FONT.render(f"Inputs", 1, "white")
-        WIN.blit(Inputs_text, (890, 146))
-        Semicolon_small_text = SMALL_FONT.render(f":", 1, "white")
-        Inputs_names = ["Radar 1", "Radar 2", "Radar 3", "Radar 4", "Radar 5", "Radar 6", "Radar 7", "Radar 8", "Offset_x", "Offset_y", "Velocity", "Angle"]
-
-        if self.current_step % 4 == 0 or terminated:       # save the state and reward every 4 frames because of the frameskip = 4
-            self.state_saved = self.state
-            self.reward_saved = self.reward
-
-        for i in range(12):
-            Input_text = SMALL_FONT.render(f"{Inputs_names[i]}", 1, "white")
-            WIN.blit(Input_text, (780, 185 + 25 * i))
-            WIN.blit(Semicolon_small_text, (846, 185 + 25 * i))
-            Inputs_value_text = SMALL_FONT.render(f"{self.state_saved[i]:.3f}", 1, "white")
-            WIN.blit(Inputs_value_text, (863, 185 + 25 * i))
-
-        Rewards_text = LARGE_FONT.render(f"Rewards", 1, "white")
-        WIN.blit(Rewards_text, (886, 503))
-        Reward_text = SMALL_FONT.render(f"Reward", 1, "white")
-        WIN.blit(Reward_text, (780, 535))
-        WIN.blit(Semicolon_small_text, (846, 535))
-        Reward_value_text = SMALL_FONT.render(f"{self.reward_saved:.2f}", 1, "white")
-        WIN.blit(Reward_value_text, (863, 535))
-
-        Outputs_text = LARGE_FONT.render(f"Outputs", 1, "white")
-        WIN.blit(Outputs_text, (884, 581))
-
-        square_coordinates = [(900, 623), (840, 683), (900, 683), (960, 683)]
-        square_colors = ["black", "black", "black", "black"] if not (terminated or truncated) else ["gray", "gray", "gray", "gray"]
-        triangle_coordinates = [[(925, 641), (917, 655), (933, 655)], [(858,708), (872, 716), (872, 700)], [(916,701), (933, 701), (925, 715)], [(978,716), (978, 700), (992, 708)]]
-
-        if not (terminated or truncated):
-            if "UP" in self.action:
-                square_colors[0] = "green"
-            elif "DOWN" in self.action:
-                square_colors[2] = "green"
-            if "LEFT" in self.action:
-                square_colors[1] = "green"
-            elif "RIGHT" in self.action:
-                square_colors[3] = "green"
-
-        for i in range(4):
-            pygame.draw.rect(WIN, square_colors[i], (square_coordinates[i][0], square_coordinates[i][1], 50, 50), 0)
-            pygame.draw.rect(WIN, "white", (square_coordinates[i][0], square_coordinates[i][1], 50, 50), 1)
-            pygame.draw.polygon(WIN, "white", triangle_coordinates[i], 0)
-
         pygame.display.update()
 
-        if terminated or truncated:
-            pygame.time.wait(500)     # freeze the screen for 0.5s
-
         self.clock.tick(self.car.fps)
-    
-    def name_action(self, action):         # transform the action from continuous to discrete
-        if action[1] >= -0.33 and action[1] <= 0.33 and action[0] >= -0.33 and action[0] <= 0.33:
-            self.action = "NOTHING"
-        else:
-            if action[1] > 0.33:
-                self.action = "UP"
-            elif action[1] < -0.33:
-                self.action = "DOWN"
-            
-            if action[0] < -0.33:
-                self.action += " LEFT"
-            elif action[0] > 0.33:
-                self.action += " RIGHT"
-            
-            self.action.strip()    # remove the leading and trailing whitespaces
-
-        return self.action
-            
-        
 
 
 class AbstractCar:
@@ -443,9 +245,6 @@ class AbstractCar:
         self.distance = 0
         self.count = 1
         self.difference = None
-        self.t_start = None
-        global new_img
-        new_img = None
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
@@ -466,13 +265,12 @@ class AbstractCar:
         # pygame.draw.rect(WIN, (0, 0, 0), new_img[1])                    # draw the new_rect rectangle around the car
         # pygame.draw.circle(WIN, (255, 0, 0), new_img[1].topleft, 5)     # draw the new_rect.x and new_rect.y coordinates with red color
         # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
-        if new_img is not None:
-            WIN.blit(new_img[0], new_img[1].topleft)
-            # pygame.draw.circle(WIN, (0, 255, 0), self.center, 3)       # draw the center of the car with green color
-            for radar in self.radars:
-                    position = radar[0]
-                    pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
-                    pygame.draw.circle(WIN, (0, 255, 0), position, 3)
+        WIN.blit(new_img[0], new_img[1].topleft)
+        # pygame.draw.circle(WIN, (0, 255, 0), self.center, 3)       # draw the center of the car with green color
+        for radar in self.radars:
+                position = radar[0]
+                pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
+                pygame.draw.circle(WIN, (0, 255, 0), position, 3)
     
     def rotate_center(self):
         '''
@@ -496,8 +294,8 @@ class AbstractCar:
         terminated = False
 
         if self.collide_map(new_img[1], new_img[2]):
-            collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
-            collision_sound.play()
+            # collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
+            # collision_sound.play()
             collides = True
             self.bounce()
         
@@ -513,21 +311,12 @@ class AbstractCar:
         global free_spot_color
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
-                green_sound.play()
+            # if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
+                # green_sound.play()
             free_spot_color = (0, 255, 0)
-            inside_spot = True  
-            discrete_vel = round((self.vel + 4) / 10, 3)                        
-            if discrete_vel == 0.4:                    # if the car is stationary in the spot
-                # print(f"Parked & stationary for {self.count} {"frame" if self.count == 1 else "frames"}", end = " ")
-                if self.count < 40:                 # if the car has been stationary for less than 40 frames, increment the counter
-                    self.count += 1
-                else:   # else if the car has been stationary for 40 frames, stop the game
-                    terminated = True
-                    self.count = 1
-                    return terminated, collides, inside_spot
-            else:
-                self.count = 1                      # if the car is not stationary, reset the counter
+            inside_spot = True                          
+            terminated = True
+            return terminated, collides, inside_spot
         else:
             free_spot_color = (255, 0, 0)
             self.count = 1
@@ -605,7 +394,7 @@ class AbstractCar:
 
     def rotate(self, left=False, right=False):
         if abs(self.vel) > 0:        # if the car is moving, it can rotate.
-            turning_factor = 0.85 if self.vel <= self.max_vel * 2/3 else 0.5     # the turning factor depends on the velocity of the car. The higher the velocity, the less the car will turn. This is because the car has inertia and it is harder to turn it when it is moving faster.  
+            turning_factor = 0.85 #if self.vel <= self.max_vel * 2/3 else 0.5     # the turning factor depends on the velocity of the car. The higher the velocity, the less the car will turn. This is because the car has inertia and it is harder to turn it when it is moving faster.  
             if left:
                 self.angle += turning_factor * self.vel              # When turning, the angle of the car changes depending on its velocity. The higher the velocity, the more the angle changes.
             elif right:
@@ -616,7 +405,7 @@ class AbstractCar:
         self.move()
 
     def move_backward(self):    # move backward with half the max speed
-        self.vel = max(self.vel - self.acceleration, -self.max_vel * 2/3)   # max because these are negative values, we are still choosing the lower speed
+        self.vel = max(self.vel - self.acceleration, -self.max_vel)   # max because these are negative values, we are still choosing the lower speed
         self.move()
 
     def move(self):
@@ -648,16 +437,14 @@ class AbstractCar:
         car_spawn_index = self.return_to_map()
         ParkingGameEnv.initialize_game(car_spawn_index)
         self.check_radars(PARKING_LOT_BORDER_MASK)
-        global new_img
-        new_img = self.rotate_center()
 
     def check_radars(self, game_map):
-        self.radars = [[(0, 0), 0] for _ in range(8)]
-        degrees = [45, 75, 105, 135, 225, 255, 285, 315]
-        step_size = 20
-        for i in range(8):
-            length = 30 if degrees[i] % 45 == 0 else 45                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
-            offset = 25 if degrees[i] % 45 == 0 else 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
+        self.radars = [[(0, 0), 0] for _ in range(4)]
+        degrees = [75, 105, 255, 285]
+        step_size = 13
+        for i in range(4):
+            length = 44                 # the starting length of the radar depends on its angle (because we don't want the radar to start checking inside the car)
+            offset = 40                 # offset is the distance from the center of the car to the edge of the car image. It depends on the angle of the radar. We use it to calculate the real distance of the radar.
             collide = False
 
             while True:
@@ -668,7 +455,7 @@ class AbstractCar:
                     break
                 x = test_x
                 y = test_y
-                if length + step_size > 245:        # so that we achieve a max distance of 205
+                if length + step_size > 70:        # so that we achieve a max distance of 70
                     break
                 length = length + step_size
             
@@ -686,25 +473,24 @@ class AbstractCar:
             self.radars[i] = [(x, y), distance]
 
     def discretize_state(self):
-        # previous_distance = self.distance 
+        previous_distance = self.distance 
         for radar in self.radars:
-            radar[1] = round(radar[1] / 205, 3)
-        # print(f"Radar 2: {self.radars[1][1]}", end=" ") 
-        discrete_vel = round((self.vel + 4) / 10, 3)     
-        # print(f"Discrete_vel: {discrete_vel}")       
-        discrete_angle = round( (((self.angle) % 360) / 360), 3)
-        # print(f"Discrete_angle: {discrete_angle}", end=" ") 
-        # self.distance = round( (math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2)) / 730.26) , 2)    # the distance of the car to the center of the parking spot
-        # print(f"Distance: {self.distance/ 730.26 :.2f}")
+            radar[1] = int(radar[1] < 30)        # The discretized radar has 2 bins, 0 if radar >= 30, 1 if radar < 30
+        # print(f"Discretized radar 1: {self.radars[0][1]}") 
+        discrete_vel = 1 if self.vel >= 0.5 else -1 if self.vel <= -0.5 else 0       # The discretized velocity has 3 bins, in range [-1, 1]
+        # print(f"Self.vel: {self.vel:.2f}    discrete_vel: {discrete_vel}")       
+        discrete_angle = -(-math.floor((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) //2)  if math.sin(math.radians(self.angle)) > 0 else math.ceil((round(math.sin(math.radians(self.angle)), 1)  * 10) / 2) // 2   # The discretized angle has 7 bins, in range [-3, 3]
+        # print(f"Self.angle: {self.angle:.2f}    discrete_angle: {discrete_angle}") 
+        self.distance = math.sqrt(math.pow(self.center[0] - free_spot_rect.centerx, 2) + math.pow(self.center[1] - free_spot_rect.centery, 2))    # the distance of the car to the center of the parking spot
         # distance_discrete = self.distance // 100 + 9 if self.distance >= 100 else self.distance // 10          # The discretized distance has 17 bins, in range [0, 16]
         # print(f"Previous Distance {previous_distance}     Distance: {self.distance}     Self.vel {self.vel}")
-        # self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
-        # print(f"Difference: {self.difference}", end=" ")
-        offset_x = round(-((free_spot_rect.centerx - self.center[0]) - 551.65) / (551.65*2), 3)     # the offset of the car in the x direction has 2 bins, 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
-        offset_y = round(-((free_spot_rect.centery - self.center[1]) -478.5) / (478.5*2), 3)    # the offset of the car in the y direction has 2 bins, 0 if the car is above the parking spot, 1 if the car is below the parking spot    
-        # print(f"Offset x: {offset_x} Offset y: {offset_y}")
+        self.difference = 1 if previous_distance - self.distance > 0  else -1 if previous_distance - self.distance < 0 else 0    # the difference between the previous distance and the current distance has 3 bins, in range [-1, 1]
+        # print(f"Difference: {self.difference}")
+        offset_x = 1 if self.center[0] - free_spot_rect.centerx > 10 else -1 if self.center[0] - free_spot_rect.centerx < -10 else 0       # the offset of the car in the x direction has 3 bins 0 if the car is to the left of the parking spot, 1 if the car is to the right of the parking spot
+        offset_y = 1 if self.center[1] - free_spot_rect.centery > 5 else -1 if self.center[1] - free_spot_rect.centery < -5 else 0      # the offset of the car in the y direction has 3 bins 0 if the car is above the parking spot, 1 if the car is below the parking spot   
+        # print(f"Offset x: {offset_x}    Offset y: {offset_y} Angle: {discrete_angle}")
         
-        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], self.radars[4][1], self.radars[5][1], self.radars[6][1], self.radars[7][1], offset_x, offset_y, discrete_vel, discrete_angle
+        return self.radars[0][1], self.radars[1][1], self.radars[2][1], self.radars[3][1], offset_x, offset_y, discrete_vel, discrete_angle
 
 
 class PlayerCar(AbstractCar):           # the player car will have additional methods for moving using the arrow keys
@@ -746,16 +532,16 @@ class AgentCar(AbstractCar):
     def move_player(self, agent_action):
         throttling = False   
         self.img = RED_CAR[0]           # the car image is set to the default image, so that it does not rotate when the player is not pressing the left or right arrow key     
-        if agent_action[0] < - 0.333:                 # Move Left
+        if  agent_action == AgentAction.DOWN_LEFT or agent_action == AgentAction.UP_LEFT:                 # Keyboard ghosting is a hardware issue where certain combinations of keys cannot be detected simultaneously due to the design of the keyboard.
                 self.rotate(left=True)          
                 self.img = pygame.transform.flip(RED_CAR[1], True, False)    
-        elif agent_action[0] > 0.333:                  # Move Right 
+        elif agent_action == AgentAction.DOWN_RIGHT or agent_action == AgentAction.UP_RIGHT:                
                 self.rotate(right=True)
                 self.img = RED_CAR[1]                                # we change the car img to the one that the wheels are turning
-        if agent_action[1] > 0.333:                    # Move Up
+        if agent_action == AgentAction.UP or agent_action == AgentAction.UP_LEFT or agent_action == AgentAction.UP_RIGHT:
             throttling = True
-            self.move_forward() 
-        elif agent_action[1] < -0.333:                 # Move Down
+            self.move_forward()
+        elif agent_action == AgentAction.DOWN or agent_action == AgentAction.DOWN_LEFT or agent_action == AgentAction.DOWN_RIGHT:
             throttling = True
             self.move_backward()
 
@@ -763,114 +549,223 @@ class AgentCar(AbstractCar):
             self.reduce_speed()
 
 
+class AgentAction(Enum):
+    UP = 0
+    DOWN = 1
+    # LEFT = 2
+    # RIGHT = 3
+    UP_LEFT = 2
+    UP_RIGHT = 3
+    DOWN_LEFT = 4
+    DOWN_RIGHT = 5
+    # NOTHING = 6
+
+
 
 # Number of steps per episode taken by the agent to park.
 # Since we operate at 20 fps, the agent chooses 20 actions per second. The car
-# can always be parked in less than 30 seconds, so we will allow max 20 x 30 = 600 steps
+# can always be parked in less than 30 seconds, so we will allow max 20 x 30 = 600 steps.
 max_steps = 600
 
-models_dir = "parking_game/TD3-models"
-log_dir = "parking_game/TD3-logs"
-
-if not os.path.exists(models_dir):
-    os.makedirs(models_dir)
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-# Train using TD3 algorithm (either from scratch or continue training)
-def train_TD3(steps_to_train, render=False, steps_previously_trained=0, run=1):
+# Train using Q-Learning (either from scratch or continue training by loading Q Table from file)
+def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpoint=-1, run=0):
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
-    env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
-    env = Monitor(env, info_keywords=("is_success",))  # Wrap the environment to log episode statistics
-    # env = DummyVecEnv([lambda: env])  
-
-    n_actions = env.action_space.shape[-1]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-
-    if steps_previously_trained > 0:
-        model_path = f"{models_dir}/td3_model-{run}_{steps_previously_trained}_steps.zip"
-        model = TD3.load(model_path, env=env, tensorboard_log=log_dir, device="auto")  # Load the model
+    
+    if episodes_previously_trained > 0:
+        q = np.load('parking_game/Q-tables/6000_random.npy')   # CHANGE THIS TO THE LAST EPISODE NUMBER
+    
     else:
-        # policy_kwargs = dict(activation_fn=th.nn.Tanh, net_arch=[128, 128, 128])       # change the policy network architecture to a 3-layer neural network with 128 units each
-        model = TD3("MlpPolicy", env, verbose=1, action_noise=action_noise, tensorboard_log=log_dir, device="auto")       # Create TD3 model, MlpPolicy is a neural network with 2 hidden layers of 64 units each, it is chosen because our input is a vector of 8 values and not an image
-                                                                                              # Change device to "cuda" for GPU training or "cpu" for CPU training
-    # print(model.policy) # print the model's network architecture
+        # Initialize the Q Table, a 2D array of zeros.
+        q = np.zeros((2, 2, 2, 2, 3, 3, 3, 7, len(AgentAction)), dtype=np.float16)        # 2 Bytes per element
 
-    checkpoint_callback = CheckpointCallback(save_freq=50000, save_path=models_dir, name_prefix=f'td3_model-{run}')
+    # Hyperparameters
+    epsilon = 1.0   # 1 = 100% random actions
+    
+    max_epsilon = 1.0
+    min_epsilon = 0.0001
+    decay_rate = 0.0001  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
+    alpha = 1   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
+    gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
 
-    model.learn(total_timesteps=steps_to_train, callback=checkpoint_callback, tb_log_name="TD3", reset_num_timesteps=True)  # Train the model
-    model.save(f"{models_dir}/td3_model-{run}_{steps_to_train}_steps.zip")  # Save the model
- 
-    print(f"Success / episodes: {env.unwrapped.successes} / {steps_to_train / max_steps :.0f}")
+    episode_rewards = []
+    episode_successes = []      # 1 if car parked, 0 if not
 
+    training_start = time.time()          
+
+    for episode in range(1, total_episodes+1):
+        print(f"\nEpisode: {episode}")
+        state = env.reset()[0]          # Reset environment at the beginning of episode
+        terminated = False
+        total_reward = 0
+        episode_successes.append(0)
+        
+        for _ in range(max_steps):       # Agent controls the car until it parks or max steps reached
+
+            for event in pygame.event.get():            
+                if event.type == pygame.QUIT:       # If the user closes the window, the game stops
+                    if episode > 100:
+                        np.save(f"parking_game/Q-tables/parking_q_{episode}.npy", q)
+                        print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
+                        plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
+                    pygame.quit()
+                    sys.exit()
+
+            state_tuple = tuple(state)
+      
+            # Select action based on epsilon-greedy
+            if random.random() < epsilon:
+                # select random action
+                action = env.action_space.sample()
+            else:                
+                # select best action
+                action = np.argmax(q[state_tuple])      
+            
+            # Perform action
+            new_state,reward,terminated,_,_ = env.step(action)
+            total_reward += reward
+
+            state_action_tuple = state_tuple + (action,)
+            new_state_tuple = tuple(new_state)
+
+            # new_state_index = states.index(tuple(new_state))
+            q[state_action_tuple] = q[state_action_tuple] + alpha * (reward + gamma * np.max(q[new_state_tuple]) - q[state_action_tuple])
+
+            if terminated:
+                episode_successes[-1] = 1
+                break
+
+            # Update current state
+            state = new_state
+
+        # Decrease epsilon
+        # epsilon = max(epsilon - 1/total_episodes, min_epsilon)
+        epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
+
+        episode_rewards.append(total_reward)
+
+        if episode % 1000 == 0:     # Save Q-Table every 1000 episodes
+            np.save(f"parking_game/Q-tables/q_model-{run}_{episode}episodes.npy", q)
+
+        if episode == checkpoint:   # Pause the training when we reach the checkpoint to check the stats and decide if we want to continue training
+            print_stats(training_start, epsilon, episode_rewards, episode_successes, episode)
+            plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
+            print(f"\nCurrent episode: {episode}")
+            checkpoint = int(input("Enter the next checkpoint (0 to stop training): "))
+            if checkpoint == 0:
+                np.save(f"parking_game/Q-tables/q_model-{run}_{episode}episodes.npy", q)
+                pygame.quit()
+                sys.exit()    
 
     env.close()
 
+    np.save(f"parking_game/Q-tables/q_model-{run}_{episode}episodes.npy", q)    # Save Q-Table after training
+    print_stats(training_start, epsilon, episode_rewards, episode_successes, total_episodes) 
+    plot_graphs(episode_rewards, episode_successes=episode_successes, train=True)    # Graph rewards
 
 
-def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
+def print_stats(training_start, epsilon, episode_rewards, episode_successes, episodes_currently_trained, step=100, episodes_previously_trained=0):
+    training_time = time.time() - training_start
+    print(f"\nTraining time: {training_time//3600:.0f} hours, {(training_time%3600)//60:.0f} minutes, {training_time%60:.2f} seconds")
+
+    print(f"\nEpsilon: {epsilon:.4f}")
+
+    print(f"\nMean reward per {step} episodes")
+    for i in range((episodes_currently_trained - episodes_previously_trained) //step):
+        print(f"{episodes_previously_trained + (i*step):5} -{episodes_previously_trained + ((i+1)*step):5}: mean episode reward: {round(np.mean(episode_rewards[i*step:(i+1)*step]),3)}")
+
+    print(f"\nMean success rate per {step} episodes")
+    for i in range((episodes_currently_trained - episodes_previously_trained) //step):
+        print(f"{episodes_previously_trained + (i*step):5} -{episodes_previously_trained + ((i+1)*step):5}: mean episode success: {(np.mean(episode_successes[i*step:(i+1)*step]) * 100)} %")
+
+def plot_graphs(episode_rewards, episode_successes=None, train=False, step=100):
+    '''
+        Create 1 figure with 2 vertically stacked subplots.
+        The 1st subplot is the mean reward per step episodes.
+        The 2nd subplot is the mean success rate per step episodes.
+        Then save the figure as a .png file.
+    '''
+    fig, axs = plt.subplots(2, sharex=True, figsize=(8, 10))
+
+    mean_reward = np.mean(episode_rewards)
+    std_reward = np.std(episode_rewards)
+    mean_episode_rewards = [np.mean(episode_rewards[i:i+step]) for i in range(0, len(episode_rewards), step)]
+    axs[0].plot([i*step for i in range(len(mean_episode_rewards))], mean_episode_rewards)
+    axs[0].set_ylabel('Reward')
+    axs[0].set_title(f'Q-Learning Rewards (Mean: {mean_reward:.2f}, +/- {std_reward:.2f})')
+
+    if episode_successes is not None:
+        mean_successes = [np.mean(episode_successes[i:i+step]) for i in range(0, len(episode_successes), step)]
+        axs[1].plot([i*step for i in range(len(mean_successes))], mean_successes)
+        axs[1].set_xlabel('Episode')
+        axs[1].set_ylabel('Success Rate')
+        axs[1].set_title(f'Q-Learning Success Rate')
+
+    if train:
+        plt.savefig('parking_game/parking_q_stats-train.png')
+    else:
+        plt.savefig('parking_game/parking_q_stats-test.png')
+    plt.show()
+
+
+def test_q(test_episodes, episodes_trained, render=True, run=0):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
-    env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
-    env = Monitor(env)  # Wrap the environment to log episode statistics
-    env.unwrapped.steps_value = steps_trained
 
-    rewards = []
-    model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
-    model = TD3.load(model_path, env=env, device="cuda")  
+    q = np.load('parking_game/Saved-Training/Q-Learning/37/q_model-' + str(run) + '_' + str(episodes_trained) + 'episodes.npy')  # load Q Table from file
 
-    for episode in range(9, test_episodes+9):
+    episode_rewards = []
+    successful_episodes = 0
+
+    for episode in range(1, test_episodes+1):
+        state = env.reset(seed=episode)[0]          # Reset environment at the beginning of episode
         terminated = False
-        truncated = False
         total_reward = 0
-        reward = 0
-        state = env.reset(seed=episode)[0]
 
-        while not terminated and not truncated:
-            action,_ = model.predict(state)
-            # print(f"Step: {env.unwrapped.current_step:3d} State: {state} Reward: {reward:.2f} -> Action: {env.unwrapped.action:<10}")
-            state, reward, terminated, truncated,_ = env.step(action)
-            total_reward += reward
         
-        rewards.append(total_reward)
-    print(f"\nAlgorithm: TD3\nSteps trained: {steps_trained}")
-    print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
-    # print(f"Times list: {env.unwrapped.times_list}")
-    print(f"Average successful episode time: {np.mean(env.unwrapped.times_list):.3f}")
-    # print(f"Collisions list: {env.unwrapped.collisions_list}")
-    print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.3f}")
+        for step in range(max_steps):   # Agent controls the car until it parks or max steps reached
 
-def test_random_agent(test_episodes, render=True):
-    env = gym.make('parking-game-v0', render_mode='human' if render else None)
-    rewards = []
+            for event in pygame.event.get():            
+                if event.type == pygame.QUIT:       # If the user closes the window, the game stops
+                    pygame.quit()
+                    sys.exit()
 
-    for episode in range(1, test_episodes+1):
-        terminated = False
-        total_reward = 0
-        state = env.reset(seed=episode)[0]
+            state_tuple = tuple(state)
+            # Select best action based on Q Table
+            action = np.argmax(q[state_tuple])
 
-        while not terminated:
-            random_action = env.action_space.sample()
-            state,reward,terminated,_,_ = env.step(random_action)
+            if render:
+                print(f"State: {state}       Action: {AgentAction(action).name:<10}", end=' ')
+
+            # Perform action
+            state,reward,terminated,_,_ = env.step(action)
+            if render:
+                print(f"Reward: {reward:.2f}")
             total_reward += reward
-            # print(f"Step: {env.unwrapped.current_step} Action: {AgentAction(random_action).name:<10} -> State: {state}", end=' ')
-            # print(f"State: {state}", end=' ')
-            print(f'Reward: {reward:.2f}') 
 
-        rewards.append(total_reward)
+            if terminated:
+                successful_episodes += 1
+                break
 
-    print("\n")
-    for episode in range(1, test_episodes+1):
-        print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
-    print(f"\nMean episode reward: {np.mean(rewards):.2f}")
-    print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
+        print(f'\nTest Episode {episode} Reward: {total_reward:.2f}')
+        episode_rewards.append(total_reward)
+
+    env.close()
+
+    step = 100
+    print(f"\nMean reward per {step} episodes")
+    for i in range(test_episodes //step):
+        print(f"{(i*step):5} -{((i+1)*step):5}: mean episode reward: {round(np.mean(episode_rewards[i*step:(i+1)*step]),3)}")
+    
+    # Graph success rate
+    print(f'\nAgent {episodes_trained} Success Rate: {successful_episodes}/{test_episodes}')
+    
+    plot_graphs(episode_rewards, step=10)    # Graph rewards
+
 
 
 if __name__ == '__main__':
 
-    # test_random_agent(10, render=True)
-            
-    # Train/test using TD3
-    # train_TD3(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_TD3(100, run="15H", steps_trained=2000000, render=True)
+    # Train/test using Q-Learning
+    # train_q(20000, render=False, episodes_previously_trained=0, checkpoint= -10000, run='37')
+    test_q(1000, 20000, render=False, run=37)

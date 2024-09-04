@@ -598,9 +598,8 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
     
     max_epsilon = 1.0
     min_epsilon = 0.0001
-    decay_rate = 0.0005  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
+    decay_rate = 0.0001  # the higher the decay rate, the faster the epsilon will decrease and the agent will start to exploit more than explore
     alpha = 1   # learning rate, 1 = 100% weight on new information, it is the optimal value since the environment is deterministic
-    min_alpha = 0.1
     gamma = 0.9   # discount rate. Near 0: more weight/reward placed on immediate state. Near 1: more on future state. Some choose 0.95 or 0.99.
 
     episode_rewards = []
@@ -612,7 +611,7 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
         
         print(f"\nEpisode: {episode}")
 
-        state = env.reset()[0]          # Reset environment at the beginning of episode
+        state = env.reset(seed=30)[0]          # Reset environment at the beginning of episode
         terminated = False
         total_reward = 0
         episode_successes.append(0)
@@ -658,7 +657,6 @@ def train_q(total_episodes, render=False, episodes_previously_trained=0, checkpo
         # Decrease epsilon
         # epsilon = max(epsilon - 1/total_episodes, min_epsilon)
         epsilon = min_epsilon + (max_epsilon - min_epsilon) * np.exp(-decay_rate * episode)
-        alpha = min_alpha + (1 - min_alpha) * np.exp(-decay_rate * episode)
 
         episode_rewards.append(total_reward)
 
@@ -781,5 +779,5 @@ def test_q(test_episodes, episodes_trained, render=True):
 if __name__ == '__main__':
 
     # Train/test using Q-Learning
-    # train_q(8000, render=False, episodes_previously_trained=0, checkpoint=-15000)
-    test_q(1000, 7500, render=True)
+    train_q(20000, render=False, episodes_previously_trained=0, checkpoint=-15000)
+    # test_q(1000, 7500, render=True)

@@ -44,7 +44,7 @@ GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
 GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
 
 
-BLUE_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-darkblue-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-darkblue-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
+BLUE_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-red-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-red-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
 YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/car-yellow-wheels.png"), 40/162)       # this way all cars have the same width (40px) 
 PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink-wheels.png"), 40/162)
 # GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green.png"), 40/163)
@@ -133,7 +133,7 @@ class AbstractCar:
         new_rect.topleft = (car_spawn.x, car_spawn.y)
         print(f"New_rect x: {new_rect.x}, y: {new_rect.y}")
 
-        return new_rect.x + new_rect.width / 2 - self.img.get_width() / 2, new_rect.y + new_rect.height / 2 - self.img.get_height() / 2
+        return new_rect.x + new_rect.width / 2 - self.img.get_width() / 2, new_rect.y + new_rect.height / 2 - self.img.get_height() / 2    # 
 
     def draw(self):
         global new_img

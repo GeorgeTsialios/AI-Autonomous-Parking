@@ -156,6 +156,8 @@ class ParkingGameEnv(gym.Env):
         self.max_steps = 600
         self.successes = 0
         self.action = ""
+        self.collisions_list = []       # number of collisions for each successful parking
+        self.steps_list = []            # number of steps for each successful parking
     
     def initialize_game(car_spawn_index):
         # start_up_sound.play()
@@ -199,6 +201,7 @@ class ParkingGameEnv(gym.Env):
         self.car.reset(seed=seed)
 
         self.current_step = 0
+        self.collisions = 0
 
         # Construct the observation state:
        # [radar0, radar1, radar2, radar3, radar4, radar5, radar6, radar7, offset_x, offset_y, velocity, angle]
@@ -242,6 +245,8 @@ class ParkingGameEnv(gym.Env):
             # print("TERMINATED", end=" ")
             info["is_success"] = True
             self.successes += 1
+            self.steps_list.append(self.current_step)
+            self.collisions_list.append(self.collisions)
             reward += 10000
 
         elif inside_spot:
@@ -262,7 +267,8 @@ class ParkingGameEnv(gym.Env):
                 reward += 1
 
             if collides:
-                print("COLLIDING")
+                # print("COLLIDING")
+                self.collisions += 1
                 reward -= 6000             # punish the car for colliding with an object
 
             if abs(state[8] - 0.5) >= 0.1 or abs(state[9] - 0.5) >= 0.1:    # when the car is far away from the parking spot
@@ -716,7 +722,7 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
     model = TD3.load(model_path, env=env, device="cuda")  
 
-    for episode in range(0, test_episodes+1):
+    for episode in range(1, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -731,10 +737,20 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
         rewards.append(total_reward)
 
     print("\n")
-    for episode in range(1, test_episodes+1):
-        print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
-    print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+    # for episode in range(1, test_episodes+1):
+    #     print(f'Episode {episode} Reward: {rewards[episode-1]:.2f}')
+    # print(f"\nMean episode reward: {np.mean(rewards):.2f}")
+
     print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
+    # convert steps_list to times_list, where each element is the time it took to park the car in the corresponding episode
+    times_list = [steps / 20 for steps in env.unwrapped.steps_list]  # 20 fps
+    #print the times list
+    # print(f"Times list: {times_list}")
+    print(f"Average successful episode time: {np.mean(times_list):.2f} seconds")
+    print(f"Standard deviation of successful episode time: {np.std(times_list):.2f} seconds")
+
+    print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.2f}")
+    print(f"Standard deviation of successful episode collisions: {np.std(env.unwrapped.collisions_list):.2f}")
 
 def test_random_agent(test_episodes, render=True):
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
