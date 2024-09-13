@@ -21,7 +21,7 @@ LARGE_FONT = pygame.font.SysFont("gadugi", 22, False, False)
 pygame.mixer.init()
 
 music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
 pygame.mixer.music.set_volume(0.05)
 collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
 start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")

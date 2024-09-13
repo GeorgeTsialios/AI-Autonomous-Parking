@@ -286,7 +286,7 @@ class ParkingGameEnv(gym.Env):
                     reward -= 3
                     if state[10] == 0.4:
                         reward -= 5
-                if  (state[11] > 0.98 or state[11] < 0.02) or (state[11] > 0.48 and state[11] < 0.52):      # reward the car for being in the right angle
+                if (state[11] > 0.98 or state[11] < 0.02) or (state[11] > 0.48 and state[11] < 0.52):      # reward the car for being in the right angle
                     reward += 0.5
         
         if self.current_step >= self.max_steps:

@@ -38,7 +38,7 @@ register(
 pygame.mixer.init()
 
 music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
 pygame.mixer.music.set_volume(0.05)
 collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
 start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
@@ -416,10 +416,10 @@ class AbstractCar:
         if new_img is not None:
             WIN.blit(new_img[0], new_img[1].topleft)
             # pygame.draw.circle(WIN, (0, 255, 0), self.center, 3)       # draw the center of the car with green color
-            # for radar in self.radars:
-            #         position = radar[0]
-            #         pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
-            #         pygame.draw.circle(WIN, (0, 255, 0), position, 3)
+            for radar in self.radars:
+                    position = radar[0]
+                    pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
+                    pygame.draw.circle(WIN, (0, 255, 0), position, 3)
     
     def rotate_center(self):
         '''
@@ -773,7 +773,7 @@ def test_Human(test_episodes):
 
     rewards = [] 
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(51, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0

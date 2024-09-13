@@ -32,13 +32,13 @@ import torch as th
 # Register this module as a gym environment. Once registered, the id is usable in gym.make().
 register(
     id='parking-game-v0',                          
-    entry_point='draw:ParkingGameEnv', # module_name:class_name
+    entry_point='instant:ParkingGameEnv', # module_name:class_name
 )
 
 pygame.mixer.init()
 
 music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
 pygame.mixer.music.set_volume(0.05)
 collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
 start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
@@ -362,7 +362,19 @@ class ParkingGameEnv(gym.Env):
         pygame.display.update()
 
         if terminated or truncated:
-            pygame.time.wait(500)     # freeze the screen for 0.5s
+            # blur the game screen
+            surf = pygame.Surface((WIN_WIDTH, WIN_HEIGHT))
+            surf.set_alpha(200)
+            surf.fill((0, 0, 0))
+            WIN.blit(surf, (0, 0))
+            if terminated:          # draw a large green tick on the center of the screen
+                pygame.draw.line(WIN, "green", (750 // 2 - 100, WIN_HEIGHT // 2), (750 // 2 - 40, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "green", (750 // 2 - 40, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)
+            else:                   # draw a large red cross on the center of the screen
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 - 100), (750 // 2 + 100, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)  
+            pygame.display.update()
+            pygame.time.wait(2000)     # freeze the screen for 2s
 
         self.clock.tick(self.car.fps)        
         
@@ -752,7 +764,7 @@ def test_Human(test_episodes):
 
     rewards = [] 
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(51, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -804,4 +816,4 @@ if __name__ == '__main__':
             
     # Train/test using A2C
     # train_A2C(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_Human(10)
+    test_Human(100)

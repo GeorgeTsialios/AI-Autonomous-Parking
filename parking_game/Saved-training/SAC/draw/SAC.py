@@ -182,7 +182,7 @@ class ParkingGameEnv(gym.Env):
                         9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                         10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-        free_spot_index = 8 if car_spawn_index == 1 else 3 # random.randint(1,10)     # the free spot will be randomly chosen at the beginning of each game
+        free_spot_index = random.randint(1, 10)   # the free spot will be randomly chosen at the beginning of each game
         # print(f"Free spot: {free_spot_index}")
         parking_spots.pop(free_spot_index)
 
@@ -260,11 +260,11 @@ class ParkingGameEnv(gym.Env):
             if self.render_mode == 'human':
                 self.render(terminated = True)
 
-        elif inside_spot:
-            self.reward += 2 + 2 / (abs(self.state[10] - 0.4) + 1)                      # reward for being inside the parking spot
-            if self.state[10] == 0.4:                   # extra reward for being stationary
-                # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
-                self.reward += 5
+        # elif inside_spot:
+        #     self.reward += 2 + 2 / (abs(self.state[10] - 0.4) + 1)                      # reward for being inside the parking spot
+        #     if self.state[10] == 0.4:                   # extra reward for being stationary
+        #         # print("BEING STATIONARY INSIDE PARKING SPOT", end=" ")
+        #         self.reward += 5
 
         else:
             # reward -= (self.car.distance / 730.26) * 5        # punishment for being away from the center of the parking spot (730.26 is the max distance)
@@ -342,11 +342,11 @@ class ParkingGameEnv(gym.Env):
         Step_text = LARGE_FONT.render(f"Step", 1, "white")   
         WIN.blit(Step_text, (780, 102))
         WIN.blit(Semicolon_large_text, (830, 102))  
-        # if not terminated:
-        #     step_to_print = self.current_step - self.current_step % 4               # print the step every 4 frames because of the frameskip = 4
-        # else:
-        #     step_to_print = self.current_step
-        Current_step_text = LARGE_FONT.render(f"{self.current_step}", 1, "white")   
+        if not terminated:
+            step_to_print = self.current_step - self.current_step % 4               # print the step every 4 frames because of the frameskip = 4
+        else:
+            step_to_print = self.current_step
+        Current_step_text = LARGE_FONT.render(f"{step_to_print}", 1, "white")   
         WIN.blit(Current_step_text, (849, 102))
 
         Time_text = LARGE_FONT.render(f"Time", 1, "white")   
@@ -360,15 +360,15 @@ class ParkingGameEnv(gym.Env):
         Semicolon_small_text = SMALL_FONT.render(f":", 1, "white")
         Inputs_names = ["Radar 1", "Radar 2", "Radar 3", "Radar 4", "Radar 5", "Radar 6", "Radar 7", "Radar 8", "Offset_x", "Offset_y", "Velocity", "Angle"]
 
-        # if self.current_step % 4 == 0 or terminated:       # save the state and reward every 4 frames because of the frameskip = 4
-        #     self.state_saved = self.state
-        #     self.reward_saved = self.reward
+        if self.current_step % 4 == 0 or terminated:       # save the state and reward every 4 frames because of the frameskip = 4
+            self.state_saved = self.state
+            self.reward_saved = self.reward
 
         for i in range(12):
             Input_text = SMALL_FONT.render(f"{Inputs_names[i]}", 1, "white")
             WIN.blit(Input_text, (780, 185 + 25 * i))
             WIN.blit(Semicolon_small_text, (846, 185 + 25 * i))
-            Inputs_value_text = SMALL_FONT.render(f"{self.state[i]:.3f}", 1, "white")
+            Inputs_value_text = SMALL_FONT.render(f"{self.state_saved[i]:.3f}", 1, "white")
             WIN.blit(Inputs_value_text, (863, 185 + 25 * i))
 
         Rewards_text = LARGE_FONT.render(f"Rewards", 1, "white")
@@ -376,7 +376,7 @@ class ParkingGameEnv(gym.Env):
         Reward_text = SMALL_FONT.render(f"Reward", 1, "white")
         WIN.blit(Reward_text, (780, 535))
         WIN.blit(Semicolon_small_text, (846, 535))
-        Reward_value_text = SMALL_FONT.render(f"{self.reward:.2f}", 1, "white")
+        Reward_value_text = SMALL_FONT.render(f"{self.reward_saved:.2f}", 1, "white")
         WIN.blit(Reward_value_text, (863, 535))
 
         Outputs_text = LARGE_FONT.render(f"Outputs", 1, "white")
@@ -404,7 +404,19 @@ class ParkingGameEnv(gym.Env):
         pygame.display.update()
 
         if terminated or truncated:
-            pygame.time.wait(500)     # freeze the screen for 0.5s
+            # blur the game screen
+            surf = pygame.Surface((WIN_WIDTH, WIN_HEIGHT))
+            surf.set_alpha(200)
+            surf.fill((0, 0, 0))
+            WIN.blit(surf, (0, 0))
+            if terminated:          # draw a large green tick on the center of the screen
+                pygame.draw.line(WIN, "green", (750 // 2 - 100, WIN_HEIGHT // 2), (750 // 2 - 40, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "green", (750 // 2 - 40, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)
+            else:                   # draw a large red cross on the center of the screen
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 - 100), (750 // 2 + 100, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)  
+            pygame.display.update()
+            pygame.time.wait(2000)     # freeze the screen for 2s
 
         self.clock.tick(self.car.fps)
     
@@ -768,7 +780,7 @@ if not os.path.exists(log_dir):
 def train_SAC(steps_to_train, render=False, steps_previously_trained=0, run=1):
 
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
-    # env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
+    env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
     env = Monitor(env, info_keywords=("is_success",))  # Wrap the environment to log episode statistics
     # env = DummyVecEnv([lambda: env])  
 
@@ -796,7 +808,7 @@ def train_SAC(steps_to_train, render=False, steps_previously_trained=0, run=1):
 def test_SAC(test_episodes, run=1, steps_trained=0, render=True):
     
     env = gym.make('parking-game-v0', render_mode='human' if render else None)
-    # env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
+    env = SkipEnv(env, skip=4)  # Skip 4 frames per step to speed-up training
     env = Monitor(env)  # Wrap the environment to log episode statistics
     env.unwrapped.steps_value = steps_trained
 
@@ -804,7 +816,7 @@ def test_SAC(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/sac_model-{run}_{steps_trained}_steps.zip"
     model = SAC.load(model_path, env=env, device="cuda")  
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(66, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -812,12 +824,14 @@ def test_SAC(test_episodes, run=1, steps_trained=0, render=True):
         state = env.reset(seed=episode)[0]
 
         while not terminated and not truncated:
-            action,_ = model.predict(state)
+            action,_ = model.predict(state, deterministic=True)
             # print(f"Step: {env.unwrapped.current_step:3d} State: {state} Reward: {reward:.2f} -> Action: {env.unwrapped.action:<10}")
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
         
         rewards.append(total_reward)
+        # if terminated:
+        #     print(f"Episode {episode} Reward: {total_reward:.2f} Success")
 
     print(f"\nAlgorithm: SAC\nSteps trained: {steps_trained}")
     print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
@@ -858,4 +872,4 @@ if __name__ == '__main__':
             
     # Train/test using SAC
     # train_SAC(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_SAC(3, run='5B', steps_trained=1700000, render=True)
+    test_SAC(100, run='6B', steps_trained=11500000, render=True)

@@ -35,16 +35,16 @@ register(
     entry_point='TD3:ParkingGameEnv', # module_name:class_name
 )
 
-# pygame.mixer.init()
+pygame.mixer.init()
 
-# music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-# # pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
-# pygame.mixer.music.set_volume(0.05)
-# collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
-# start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
-# start_up_sound.set_volume(0.2)
-# green_sound = pygame.mixer.Sound("parking_game/sounds/success-bell-6776_8ODfLqon.wav")
-# green_sound.set_volume(0.1)
+music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
+# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+pygame.mixer.music.set_volume(0.05)
+collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
+start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
+start_up_sound.set_volume(0.2)
+green_sound = pygame.mixer.Sound("parking_game/sounds/success-bell-6776_8ODfLqon.wav")
+green_sound.set_volume(0.1)
 
 
 def scale_image(img, factor):
@@ -57,7 +57,7 @@ GARDEN_BORDER = pygame.image.load("parking_game/imgs/garden-border.png")
 GARDEN_BORDER_MASK = pygame.mask.from_surface(GARDEN_BORDER)
 
 
-RED_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-red-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-red-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
+RED_CAR = [scale_image(pygame.image.load("parking_game/imgs/car-black-wheels.png"), 40/161), scale_image(pygame.image.load("parking_game/imgs/car-black-wheels-right.png"), 40/161)]            # factor is equal to desired width of car / actual width of image
 YELLOW_CAR = scale_image(pygame.image.load("parking_game/imgs/car-yellow-wheels.png"), 40/162)       # this way all cars have the same width (40px) 
 PINK_CAR = scale_image(pygame.image.load("parking_game/imgs/car-pink-wheels.png"), 40/162)
 GREEN_CAR = scale_image(pygame.image.load("parking_game/imgs/car-green-new-wheels.png"), 40/127)
@@ -161,7 +161,7 @@ class ParkingGameEnv(gym.Env):
 
     
     def initialize_game(car_spawn_index):
-        # start_up_sound.play()
+        start_up_sound.play()
 
         random.shuffle(cars)
         global parking_spots
@@ -299,13 +299,13 @@ class ParkingGameEnv(gym.Env):
         # Render environment
         if(self.render_mode == 'human'):
             # print(AgentAction(action))
-            self.render()
+            self.render(terminated,truncated)
 
         # Return observation, reward, terminated, truncated, info
         return obs, reward, terminated, truncated, info
     
     # Gym required function to render environment
-    def render(self):
+    def render(self, terminated, truncated):
         WIN.blit(PARKING_LOT, (0, 0))
 
         for index, spot in parking_spots.items():
@@ -319,6 +319,21 @@ class ParkingGameEnv(gym.Env):
             pygame.draw.rect(WIN, (255, 0, 0), intersection)            # draw a red rectangle around the point of intersection
 
         pygame.display.update()
+
+        if terminated or truncated:
+            # blur the game screen
+            surf = pygame.Surface((WIN_WIDTH, WIN_HEIGHT))
+            surf.set_alpha(200)
+            surf.fill((0, 0, 0))
+            WIN.blit(surf, (0, 0))
+            if terminated:          # draw a large green tick on the center of the screen
+                pygame.draw.line(WIN, "green", (750 // 2 - 100, WIN_HEIGHT // 2), (750 // 2 - 40, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "green", (750 // 2 - 40, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)
+            else:                   # draw a large red cross on the center of the screen
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 - 100), (750 // 2 + 100, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)  
+            pygame.display.update()
+            pygame.time.wait(2000)     # freeze the screen for 2s
 
         self.clock.tick(self.car.fps)
     
@@ -375,10 +390,10 @@ class AbstractCar:
         # pygame.draw.circle(WIN, (0, 0, 255), (self.x, self.y), 5)       # draw the self.x and self.y coordinates with blue color
         WIN.blit(new_img[0], new_img[1].topleft)
         # pygame.draw.circle(WIN, (0, 255, 0), self.center, 3)       # draw the center of the car with green color
-        for radar in self.radars:
-                position = radar[0]
-                pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
-                pygame.draw.circle(WIN, (0, 255, 0), position, 3)
+        # for radar in self.radars:
+        #         position = radar[0]
+        #         pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
+        #         pygame.draw.circle(WIN, (0, 255, 0), position, 3)
     
     def rotate_center(self):
         '''
@@ -402,8 +417,8 @@ class AbstractCar:
         terminated = False
 
         if self.collide_map(new_img[1], new_img[2]):
-            # collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
-            # collision_sound.play()
+            collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
+            collision_sound.play()
             collides = True
             self.bounce()
         
@@ -419,8 +434,8 @@ class AbstractCar:
         global free_spot_color
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            # if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
-                # green_sound.play()
+            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
+                green_sound.play()
             free_spot_color = (0, 255, 0)
             inside_spot = True  
             discrete_vel = round((self.vel + 4) / 10, 3)                        
@@ -723,7 +738,7 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
     model = TD3.load(model_path, env=env, device="cuda")  
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(60, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -795,4 +810,4 @@ if __name__ == '__main__':
             
     # Train/test using TD3
     # train_TD3(10000000, render=False, steps_previously_trained=1, run="15G")
-    test_TD3(100, run="15G", steps_trained=1850000, render=False)
+    test_TD3(100, run=10, steps_trained=1850000, render=True)

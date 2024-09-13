@@ -178,7 +178,7 @@ class ParkingGameEnv(gym.Env):
                         9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                         10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-        free_spot_index = 8 if car_spawn_index == 1 else 3     # the free spot will be randomly chosen at the beginning of each game
+        free_spot_index = random.randint(1, 10)      # the free spot will be randomly chosen
         # print(f"Free spot: {free_spot_index}")
         parking_spots.pop(free_spot_index)
 
@@ -382,7 +382,19 @@ class ParkingGameEnv(gym.Env):
         pygame.display.update()
 
         if terminated or truncated:
-            pygame.time.wait(500)     # freeze the screen for 0.5s
+            # blur the game screen
+            surf = pygame.Surface((WIN_WIDTH, WIN_HEIGHT))
+            surf.set_alpha(200)
+            surf.fill((0, 0, 0))
+            WIN.blit(surf, (0, 0))
+            if terminated:          # draw a large green tick on the center of the screen
+                pygame.draw.line(WIN, "green", (750 // 2 - 100, WIN_HEIGHT // 2), (750 // 2 - 40, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "green", (750 // 2 - 40, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)
+            else:                   # draw a large red cross on the center of the screen
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 - 100), (750 // 2 + 100, WIN_HEIGHT // 2 + 100), 5)
+                pygame.draw.line(WIN, "red", (750 // 2 - 100, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)  
+            pygame.display.update()
+            pygame.time.wait(2000)     # freeze the screen for 2s
 
         self.clock.tick(self.car.fps)        
         
@@ -404,7 +416,7 @@ class AbstractCar:
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
-        car_spawn_index = random.randint(0, 1)
+        car_spawn_index = random.randint(0, 3)
         car_spawn = SPAWN_RECTS[car_spawn_index]
         car_spawn.x += random.randint(0, car_spawn.width)               # randomize the spawn position of the player car
         car_spawn.y += random.randint(0, car_spawn.height)
@@ -774,7 +786,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/ppo_model-{run}_{steps_trained}_steps.zip"
     model = PPO.load(model_path, env=env, device="cuda")  
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(92, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -783,16 +795,19 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
 
         while not terminated and not truncated:
             action,_ = model.predict(state, deterministic=True)
-            print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
+            # print(f"Step: {env.unwrapped.current_step:3d} Action: {AgentAction(action).name:<10} -> State: {state} Reward: {reward:.2f}")
             state, reward, terminated, truncated,_ = env.step(action)
             total_reward += reward
         
         rewards.append(total_reward)
+        # if terminated:
+        #     print(f"Episode {episode} Reward: {total_reward:.2f} Success")
+        
     print(f"\nAlgorithm: PPO\nSteps trained: {steps_trained}")
     print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
-    print(f"Times list: {env.unwrapped.times_list}")
+    # print(f"Times list: {env.unwrapped.times_list}")
     print(f"Average successful episode time: {np.mean(env.unwrapped.times_list):.3f}")
-    print(f"Collisions list: {env.unwrapped.collisions_list}")
+    # print(f"Collisions list: {env.unwrapped.collisions_list}")
     print(f"Average successful episode collisions: {np.mean(env.unwrapped.collisions_list):.3f}")
 
 def test_random_agent(test_episodes, render=True):
@@ -827,4 +842,4 @@ if __name__ == '__main__':
             
     # Train/test using PPO
     # train_PPO(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_PPO(3, run=59, steps_trained=19000000, render=True)
+    test_PPO(1000, run='67B', steps_trained=500000, render=True)

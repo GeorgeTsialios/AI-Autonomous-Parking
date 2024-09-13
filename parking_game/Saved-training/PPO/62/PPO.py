@@ -34,6 +34,10 @@ register(
     entry_point='PPO:ParkingGameEnv', # module_name:class_name
 )
 
+pygame.font.init()      # Initialize the font module, essential for rendering text on the screen
+SMALL_FONT = pygame.font.SysFont("gadugi", 16, False, False)    # Select text font, size, bold, italic.
+LARGE_FONT = pygame.font.SysFont("gadugi", 22, False, False) 
+
 pygame.mixer.init()
 
 music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
@@ -155,7 +159,7 @@ class ParkingGameEnv(gym.Env):
         self.successes = 0
     
     def initialize_game(car_spawn_index):
-        # start_up_sound.play()
+        start_up_sound.play()
 
         random.shuffle(cars)
         global parking_spots
@@ -282,6 +286,17 @@ class ParkingGameEnv(gym.Env):
             WIN.blit(spot[1], (spot[2], spot[3]))
         
         pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
+
+        Semicolon_text = LARGE_FONT.render(f":", 1, "black")   
+        WIN.blit(Semicolon_text, (845, 191))    
+        Dash_text = LARGE_FONT.render(f"-", 1, "white")   
+        WIN.blit(Dash_text, (864, 191))
+
+        Time_text = LARGE_FONT.render(f"Time", 1, "black")   
+        WIN.blit(Time_text, (592, 10))
+        WIN.blit(Semicolon_text, (655, 10))    
+        Time_value_text = LARGE_FONT.render(f"{self.current_step/20:.2f}s", 1, "black")   
+        WIN.blit(Time_value_text, (674, 10))   
             
         self.car.draw()
         # pygame.draw.circle(WIN, (0, 0, 255), free_spot_rect.center, 3)       # draw the center of the parking spot with blue color
@@ -353,7 +368,7 @@ class AbstractCar:
 
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
-            # collision_sound.play()
+            collision_sound.play()
             collides = True
             self.bounce()
         
@@ -673,7 +688,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/ppo_model-{run}_{steps_trained}_steps.zip"
     model = PPO.load(model_path, env=env, device="cuda")  
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(0, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -725,4 +740,4 @@ if __name__ == '__main__':
             
     # Train/test using PPO
     # train_PPO(30000000, render=False, steps_previously_trained=0, run='62D')
-    test_PPO(1000, run='62D', steps_trained=2800000, render=True)
+    test_PPO(1000, run='62', steps_trained=10050000, render=True)

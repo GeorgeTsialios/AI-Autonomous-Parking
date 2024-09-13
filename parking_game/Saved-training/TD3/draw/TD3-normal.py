@@ -280,6 +280,7 @@ class ParkingGameEnv(gym.Env):
 
             if collides:
                 self.collisions += 1
+                # print("Collision", end=" ")
                 self.reward -= 6000             # punish the car for colliding with an object
 
             if abs(self.state[8] - 0.5) >= 0.1 or abs(self.state[9] - 0.5) >= 0.1:    # when the car is far away from the parking spot
@@ -481,10 +482,10 @@ class AbstractCar:
         if new_img is not None:
             WIN.blit(new_img[0], new_img[1].topleft)
             # pygame.draw.circle(WIN, (0, 255, 0), self.center, 3)       # draw the center of the car with green color
-            # for radar in self.radars:
-            #         position = radar[0]
-            #         pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
-            #         pygame.draw.circle(WIN, (0, 255, 0), position, 3)
+            for radar in self.radars:
+                    position = radar[0]
+                    pygame.draw.line(WIN, (0, 255, 0), self.center, position, 1)
+                    pygame.draw.circle(WIN, (0, 255, 0), position, 3)
     
     def rotate_center(self):
         '''
@@ -832,7 +833,7 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
     model = TD3.load(model_path, env=env, device="cuda")  
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(9, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -846,6 +847,9 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
             total_reward += reward
         
         rewards.append(total_reward)
+        # if terminated:
+        #     print(f"Episode {episode} Reward: {total_reward:.2f} Success")
+
     print(f"\nAlgorithm: TD3\nSteps trained: {steps_trained}")
     print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
     # print(f"Times list: {env.unwrapped.times_list}")
@@ -885,4 +889,4 @@ if __name__ == '__main__':
             
     # Train/test using TD3
     # train_TD3(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_TD3(1000, run="15G", steps_trained=1850000, render=True)
+    test_TD3(100, run="15G", steps_trained=1850000, render=True)

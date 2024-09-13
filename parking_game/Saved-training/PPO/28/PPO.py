@@ -155,7 +155,7 @@ class ParkingGameEnv(gym.Env):
         self.successes = 0
     
     def initialize_game(car_spawn_index):
-        # start_up_sound.play()
+        start_up_sound.play()
 
         random.shuffle(cars)
         global parking_spots
@@ -189,7 +189,7 @@ class ParkingGameEnv(gym.Env):
         return free_spot_index
 
     # Gym required function (and parameters) to reset the environment
-    def reset(self, seed=30, options=None):
+    def reset(self, seed=None, options=None):
         super().reset(seed=seed) # gym requires this call to control randomness and reproduce scenarios.
 
         # Reset the Parking Optionally, pass in seed control randomness and reproduce scenarios.
@@ -233,6 +233,14 @@ class ParkingGameEnv(gym.Env):
         if terminated:
             # print("TERMINATED", end=" ")
             self.successes += 1
+            surf = pygame.Surface((WIN_WIDTH, WIN_HEIGHT))
+            surf.set_alpha(200)
+            surf.fill((0, 0, 0))
+            WIN.blit(surf, (0, 0))
+            pygame.draw.line(WIN, "green", (750 // 2 - 100, WIN_HEIGHT // 2), (750 // 2 - 40, WIN_HEIGHT // 2 + 100), 5)
+            pygame.draw.line(WIN, "green", (750 // 2 - 40, WIN_HEIGHT // 2 + 100), (750 // 2 + 100, WIN_HEIGHT // 2 - 100), 5)
+            pygame.display.update()
+            pygame.time.wait(2000)     # freeze the screen for 2s
             reward += 5000    
 
         elif inside_spot:
@@ -350,7 +358,7 @@ class AbstractCar:
 
         if self.collide_map(new_img[1], new_img[2]):
             collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
-            # collision_sound.play()
+            collision_sound.play()
             collides = True
             self.bounce()
         
@@ -366,8 +374,8 @@ class AbstractCar:
         global free_spot_color
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            # if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
-                # green_sound.play()
+            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
+                green_sound.play()
             free_spot_color = (0, 255, 0)
             inside_spot = True                          
             if round(self.vel, 1) == 0.0:                    # if the car is stationary in the spot
@@ -682,7 +690,7 @@ def test_PPO(test_episodes, run=1, steps_trained=0, render=True):
         terminated = False
         truncated = False
         total_reward = 0
-        state = env.reset()[0]
+        state = env.reset(seed=episode)[0]
 
         while not terminated and not truncated:
             action,_ = model.predict(state, deterministic=True)

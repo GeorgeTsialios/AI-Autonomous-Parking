@@ -35,16 +35,16 @@ register(
     entry_point='TD3:ParkingGameEnv', # module_name:class_name
 )
 
-# pygame.mixer.init()
+pygame.mixer.init()
 
-# music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-# # pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
-# pygame.mixer.music.set_volume(0.05)
-# collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
-# start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
-# start_up_sound.set_volume(0.2)
-# green_sound = pygame.mixer.Sound("parking_game/sounds/success-bell-6776_8ODfLqon.wav")
-# green_sound.set_volume(0.1)
+music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
+# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+pygame.mixer.music.set_volume(0.05)
+collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
+start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
+start_up_sound.set_volume(0.2)
+green_sound = pygame.mixer.Sound("parking_game/sounds/success-bell-6776_8ODfLqon.wav")
+green_sound.set_volume(0.1)
 
 
 def scale_image(img, factor):
@@ -84,6 +84,10 @@ intersection = None
 free_spot_rect = None
 FREE_SPOT_BORDER_MASK = None
 PARKING_LOT_BORDER_MASK = None
+
+pygame.font.init()      # Initialize the font module, essential for rendering text on the screen
+SMALL_FONT = pygame.font.SysFont("gadugi", 16, False, False)    # Select text font, size, bold, italic.
+LARGE_FONT = pygame.font.SysFont("gadugi", 22, False, False) 
 
 
 
@@ -158,7 +162,7 @@ class ParkingGameEnv(gym.Env):
         self.action = ""
     
     def initialize_game(car_spawn_index):
-        # start_up_sound.play()
+        start_up_sound.play()
 
         random.shuffle(cars)
         global parking_spots
@@ -177,7 +181,7 @@ class ParkingGameEnv(gym.Env):
                         9: [pygame.Rect(453.32, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(random.choice(cars), False, random.choice([True,False])), 453.32, 457.88],
                         10: [pygame.Rect(551.65, 457.88, CAR_WIDTH, CAR_HEIGHT), pygame.transform.flip(cars[3], False, random.choice([True,False])), 551.65, 457.88]}
 
-        free_spot_index = random.randint(1,10)     # the free spot will be randomly chosen at the beginning of each game
+        free_spot_index = random.randint(6,10)  if car_spawn_index == 1 else random.randint(1,5)   # the free spot will be randomly chosen at the beginning of each game
         # print(f"Free spot: {free_spot_index}")
         parking_spots.pop(free_spot_index)
 
@@ -306,6 +310,17 @@ class ParkingGameEnv(gym.Env):
         
         pygame.draw.rect(WIN, free_spot_color, free_spot_rect, 2)
             
+        Semicolon_text = LARGE_FONT.render(f":", 1, "black")   
+        WIN.blit(Semicolon_text, (845, 191))    
+        Dash_text = LARGE_FONT.render(f"-", 1, "white")   
+        WIN.blit(Dash_text, (864, 191))
+
+        Time_text = LARGE_FONT.render(f"Time", 1, "black")   
+        WIN.blit(Time_text, (592, 10))
+        WIN.blit(Semicolon_text, (655, 10))    
+        Time_value_text = LARGE_FONT.render(f"{self.current_step/20:.2f}s", 1, "black")   
+        WIN.blit(Time_value_text, (674, 10))  
+
         self.car.draw()
         # pygame.draw.circle(WIN, (0, 0, 255), free_spot_rect.center, 3)       # draw the center of the parking spot with blue color
         if intersection is not None:
@@ -349,7 +364,7 @@ class AbstractCar:
 
     def calculate_START_POS(self):       
         SPAWN_RECTS = [pygame.Rect(2, 2, 651, 95), pygame.Rect(2, 558, 651, 95), pygame.Rect(2, 97, 26, 461), pygame.Rect(627, 97, 26, 461)]        # these are the rectangles where the car can spawn
-        car_spawn_index = random.randint(0, 3)
+        car_spawn_index = random.randint(0, 1)
         car_spawn = SPAWN_RECTS[car_spawn_index]
         car_spawn.x += random.randint(0, car_spawn.width)               # randomize the spawn position of the player car
         car_spawn.y += random.randint(0, car_spawn.height)
@@ -396,7 +411,7 @@ class AbstractCar:
 
         if self.collide_map(new_img[1], new_img[2]):
             # collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
-            # collision_sound.play()
+            collision_sound.play()
             collides = True
             self.bounce()
         
@@ -412,8 +427,8 @@ class AbstractCar:
         global free_spot_color
 
         if self.collide_free_spot(new_img[1], new_img[2]):
-            # if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
-                # green_sound.play()
+            if free_spot_color == (255, 0, 0):         # if the color is red, it means that the car has just parked in the spot, so play the sound
+                green_sound.play()
             free_spot_color = (0, 255, 0)
             inside_spot = True  
             discrete_vel = round((self.vel + 4) / 10, 3)                        
@@ -716,7 +731,7 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
     model = TD3.load(model_path, env=env, device="cuda")  
 
-    for episode in range(1, test_episodes+1):
+    for episode in range(42, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -768,4 +783,4 @@ if __name__ == '__main__':
             
     # Train/test using TD3
     # train_TD3(10000000, render=False, steps_previously_trained=1, run=15)
-    test_TD3(5, run="15A", steps_trained=900000, render=True)
+    test_TD3(100, run="15A", steps_trained=900000, render=True)

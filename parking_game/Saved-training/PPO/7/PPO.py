@@ -735,4 +735,4 @@ if __name__ == '__main__':
             
     # Train/test using PPO
     # train_PPO(2000, render=False, episodes_previously_trained=0, run=7)
-    test_PPO(10, '69C', 1000, render=True)
+    test_PPO(10, '4', 50000, render=True)
