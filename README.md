@@ -71,5 +71,43 @@ For more details, you can:
 
 <br>
 
-## Table of Contents
+## Help Guide
 
+If you’d like to use this project, here’s a step-by-step guide to get you started.
+
+### Play the Game
+
+1. Navigate to [AI-Autonomous-Parking/parking_game/Saved-training/Human](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/tree/main/parking_game/Saved-training/Human).
+2. Choose the version of the game you want to play:
+   - Run **instant.py** to play the *instant-parking* version of the game
+   - Run **normal.py** file to play the *normal-parking* version of the game, where 2 seconds of immobility are required for the car to be considered parked.
+
+<br>
+
+### Watch the Trained Agents Play
+
+For example, to watch the agent trained with the TD3 algorithm:
+
+1. Navigate to [AI-Autonomous-Parking/parking_game/Saved-training/TD3/draw](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/tree/main/parking_game/Saved-training/TD3/draw).
+2. Choose the version of the game:
+   - Run **TD3-instant.py** to watch the agent play the instant-parking version, 
+   - Run **TD3-normal.py** to watch the agent play the normal-parking version.
+
+<br>
+
+### Build upon the project
+
+#### Code and Training Results
+
+1. Go to the **AI-Autonomous-Parking/parking_game/Saved-training/{algorithm_name}** folder to access the code and data for training agents with a specific algorithm.
+2. Inside this folder, you’ll find:
+   - Subfolders for each training attempt (e.g., 5B, 6A). Each subfolder contains:
+     - A Python file (.py) with the code for that specific training attempt.
+     - The best-trained agent for the attempt (.zip file).
+   - A **Αρχείο {algorithm_name}.txt** file documenting the changes made and the results of each training attempt.
+   - The **draw** subfolder, which contains the best-performing agent and its corresponding code.
+
+#### Tensorboard logs
+
+1. Navigate to AI-Autonomous-Parking/parking_game/{algorithm_name}-logs.
+2. This folder contains subfolders with TensorBoard logs for each training attempt. These logs provide insights into the agent's progress during training.
