@@ -38,13 +38,13 @@ register(
 pygame.mixer.init()
 
 music = pygame.mixer.music.load("parking_game/sounds/1-Happy-walk.mp3")
-# pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
-pygame.mixer.music.set_volume(0.05)
+pygame.mixer.music.play(-1)     # -1 means that the music will loop indefinitely
+pygame.mixer.music.set_volume(0.5)
 collision_sound = pygame.mixer.Sound("parking_game/sounds/Car_Door_Close.wav")
 start_up_sound = pygame.mixer.Sound("parking_game/sounds/carengine-5998-[AudioTrimmer.com].wav")
-start_up_sound.set_volume(0.2)
+start_up_sound.set_volume(1)
 green_sound = pygame.mixer.Sound("parking_game/sounds/success-bell-6776_8ODfLqon.wav")
-green_sound.set_volume(0.1)
+green_sound.set_volume(1)
 
 
 def scale_image(img, factor):
@@ -509,7 +509,7 @@ class AbstractCar:
         terminated = False
 
         if self.collide_map(new_img[1], new_img[2]):
-            collision_sound.set_volume(max(min(abs(self.vel * 0.01), 0.02), 0.008))
+            collision_sound.set_volume(max(min(abs(self.vel * 0.32), 0.02), 0.008))
             collision_sound.play()
             collides = True
             self.bounce()
@@ -833,7 +833,7 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
     model = TD3.load(model_path, env=env, device="cuda")  
 
-    for episode in range(9, test_episodes+1):
+    for episode in range(307, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
@@ -847,8 +847,10 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
             total_reward += reward
         
         rewards.append(total_reward)
-        # if terminated:
-        #     print(f"Episode {episode} Reward: {total_reward:.2f} Success")
+        if terminated:
+            print(f"Episode {episode} Reward: {total_reward:.2f} Success")
+        if truncated:
+            print(f"Episode {episode} Failure")
 
     print(f"\nAlgorithm: TD3\nSteps trained: {steps_trained}")
     print(f"Success ratio: {env.unwrapped.successes} / {test_episodes}")
@@ -889,4 +891,4 @@ if __name__ == '__main__':
             
     # Train/test using TD3
     # train_TD3(7000000, render=False, steps_previously_trained=3550000, run=12)
-    test_TD3(100, run="15G", steps_trained=1850000, render=True)
+    test_TD3(358, run="15G", steps_trained=1850000, render=True)
