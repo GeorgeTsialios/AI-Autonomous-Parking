@@ -90,8 +90,8 @@ For example, to watch the agent trained with the TD3 algorithm:
 
 1. Navigate to [AI-Autonomous-Parking/parking_game/Saved-training/TD3/draw](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/tree/main/parking_game/Saved-training/TD3/draw).
 2. Choose the version of the game:
-   - Run **TD3-instant.py** to watch the agent play the instant-parking version, 
-   - Run **TD3-normal.py** to watch the agent play the normal-parking version.
+   - Run **TD3-instant.py** to watch the agent play the *instant-parking* version, 
+   - Run **TD3-normal.py** to watch the agent play the *normal-parking* version.
 
 <br>
 
@@ -109,5 +109,5 @@ For example, to watch the agent trained with the TD3 algorithm:
 
 #### Tensorboard logs
 
-1. Navigate to AI-Autonomous-Parking/parking_game/{algorithm_name}-logs.
+1. Navigate to **AI-Autonomous-Parking/parking_game/{algorithm_name}-logs**.
 2. This folder contains subfolders with TensorBoard logs for each training attempt. These logs provide insights into the agent's progress during training.
