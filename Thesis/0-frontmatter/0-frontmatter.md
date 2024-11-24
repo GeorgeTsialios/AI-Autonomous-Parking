@@ -18,11 +18,11 @@ director: Γεώργιος Θεοδωρίδης,\\Αναπληρωτής Καθ�
 abstract-el:
     - Στη σημερινή εποχή, το επιστημονικό πεδίο της Τεχνητής Νοημοσύνης αποτελεί ένα από τα πιο ραγδαία αναπτυσσόμενα ερευνητικά αντικείμενα  παγκοσμίως. Με πιο πρόσφατο παράδειγμα την ανάπτυξη των μεγάλων γλωσσικών μοντέλων (LLMs) όπως το ChatGPT της OpenAI, η Τεχνητή Νοημοσύνη παρεισφρύει ολοένα και περισσότερο στη ζωή των ανθρώπων, παρέχοντας εφαρμογές που λύνουν προβλήματα της καθημερινότητας με υπεράνθρωπη ακρίβεια και ταχύτητα. Στον πυρήνα των εφαρμογών αυτών βρίσκονται συχνά αλγόριθμοι Μηχανικής Μάθησης, ενός υποπεδίου της Τεχνητής Νοημοσύνης. Οι συγκεκριμένοι αλγόριθμοι εξετάζονται συνήθως, πρώτα σε δοκιμαστικά περιβάλλοντα, όπως παιχνίδια, όπου η προσομοίωση της πραγματικότητας είναι εύκολη και ακίνδυνη.
     - Στο πλαίσιο αυτό, στόχος της παρούσας διπλωματικής εργασίας είναι η εκπαίδευση πρακτόρων τεχνητής νοημοσύνης σε ένα απλό παιχνίδι, χρησιμοποιώντας διαφορετικούς αλγορίθμους και η σύγκριση τους σε όρους χρόνου εκπαίδευσης και τελικής επίδοσης. Συγκεκριμένα, αναπτύχθηκε ένα παιχνίδι στο οποίο ο πράκτορας καλείται να παρκάρει ένα αυτοκίνητο σε μία τυχαία θέση στάθμευσης. Οι αλγόριθμοι που εξετάστηκαν ανήκουν στην υποκατηγορία της Μηχανικής Μάθησης που ονομάζεται Ενισχυτική Μάθηση και είναι οι εξής&#58; Q-learning, Proximal Policy Optimization (PPO), Soft Actor Critic (SAC), Deep Deterministic Policy Gradient (DDPG) και Twin Delayed Deep Deterministic Policy Gradient (TD3).
-    - Ο κώδικας που αναπτύχθηκε για την υλοποίηση του παιχνιδιού και την εκπαίδευση των πρακτόρων είναι ελεύθερα διαθέσιμος στον παρακάτω σύνδεσμο&#58; [GitHub Repository](https://github.com/GeorgeTsialios/Thesis).
+    - Ο κώδικας που αναπτύχθηκε για την εργασία, καθώς και ένα βίντεο παρουσίασης της, βρίσκονται στον παρακάτω σύνδεσμο&#58; [GitHub Repository](https://github.com/GeorgeTsialios/Thesis).
 abstract-en:
     - In the modern era, the scientific field of Artificial Intelligence is one of the most rapidly evolving research areas worldwide. Artificial Intelligence is increasingly entering people's lives, by offering applications that solve everyday problems with superhuman accuracy and speed. A recent example of this, is the development of Large Language Models (LLMs) like OpenAI's ChatGPT. At the core of these applications are often Machine Learning algorithms, a subfield of Artificial Intelligence. These algorithms are usually tested first in experimental environments, such as games, where simulating reality is easy and safe.
     - In this context, the goal of this thesis is to train Artificial Intelligence agents in a simple game using different algorithms and compare them in terms of training time and final performance. More specifically, a game was developed in which the agent is tasked with parking a car in a random parking spot. The following algorithms -which belong to the Machine Learning subcategory called Reinforcement Learning- were used&#58; Q-learning, Proximal Policy Optimization (PPO), Soft Actor Critic (SAC), Deep Deterministic Policy Gradient (DDPG) and Twin Delayed Deep Deterministic Policy Gradient (TD3).
-    - The code developed for the implementation of the game and the training of the agents is publicly available at the following link&#58; [GitHub Repository](https://github.com/GeorgeTsialios/Thesis).
+    - The code developed for this projec, as well as a video presentation, can be found at the following link&#58; [GitHub Repository](https://github.com/GeorgeTsialios/Thesis).
 acknowlegements:
     - Ολοκληρώνοντας την ακαδημαϊκή μου σταδιοδρομία, θα ήθελα να ευχαριστήσω όλους όσους με βοήθησαν, έμπρακτα αλλά και όχι μόνο, τα τελευταία πέντε έτη των σπουδών μου.
     - Αρχικά, επιθυμώ να ευχαριστήσω τον επιβλέποντα της διπλωματικής μου εργασίας, κο Κυριάκο Σγάρμπα, ο οποίος μου έδωσε την ευκαιρία να ασχοληθώ με ένα τόσο ενδιαφέρον ερευνητικό πεδίο. Ακόμα, η εμπιστοσύνη που μου έδειξε και η καθοδήγηση του έπαιξαν καθοριστικό ρόλο στην ομαλή εκπόνηση της παρούσας εργασίας. 
@@ -33,7 +33,7 @@ keywords-el:
     - Βαθιά Ενισχυτική Μάθηση
     - Νευρωνικά Δίκτυα
     - Σύγκριση αλγορίθμων
-    - Αυτοδηγούμενα οχήματα
+    - Αυτοοδηγούμενα οχήματα
     - OpenAI Gymnasium
     - Stable-Baselines 3
 keywords-en:

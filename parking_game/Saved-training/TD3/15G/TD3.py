@@ -738,7 +738,7 @@ def test_TD3(test_episodes, run=1, steps_trained=0, render=True):
     model_path = f"{models_dir}/td3_model-{run}_{steps_trained}_steps.zip"
     model = TD3.load(model_path, env=env, device="cuda")  
 
-    for episode in range(60, test_episodes+1):
+    for episode in range(100, test_episodes+1):
         terminated = False
         truncated = False
         total_reward = 0
