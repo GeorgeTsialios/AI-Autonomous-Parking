@@ -32,6 +32,8 @@ We can see that as the *Steps Trained* increase, the agent's performance improve
 
 https://github.com/user-attachments/assets/d182e9b7-be53-4e21-ac07-7d9da5f042c9
 
+We can see that all agents have developed strong parking skills.
+
 <br>
 
 - **Side-by-Side Comparison Between the Best Agent (TD3) and a Human Player (myself):**
@@ -64,10 +66,11 @@ This graph highlights how effective the agents have become at playing the game.
 
 ### Additional Resources
 
-For more details, you can:
+Explore more about the project:
 
-- Read the full project report (in Greek): [Project Report (PDF)](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/blob/main/Report.pdf)
-- Watch the video presentation (in Greek): [YouTube Video](https://www.youtube.com/watch?v=0QqAaAosaes&t=546s&ab_channel=GeorgeTsialios)
+- [Project Report (PDF, in Greek)](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/blob/main/Report.pdf)
+- [Project Presentation (YouTube, in Greek)](https://www.youtube.com/watch?v=0QqAaAosaes&t=546s&ab_channel=GeorgeTsialios)
+- [Best Agent Gameplay (8-minute YouTube video)](https://www.youtube.com/watch?v=dPb2kcen6cY)
 
 <br>
 
