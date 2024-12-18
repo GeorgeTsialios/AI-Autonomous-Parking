@@ -4,7 +4,7 @@
 
 ### Subject 
 
-This project served as the thesis for my studies in the Electrical and Computer Engineering Department at the University of Patras. It features a parking game developed in **Python** using the **Pygame** library, where players are tasked with parking a car in a randomly assigned parking spot using arrow keys. AI agents were trained to play the game using **OpenAI's Gymnasium** and **Stable-Baselines3** libraries. The following algorithms -which fall under the **Reinforcement Learning** category of **Machine Learning**- were implemented:
+This project served as the thesis for my studies in the Electrical and Computer Engineering Department at the University of Patras. It also secured the 3rd place in the 2024 AI competition organized by the AI-Hub at the University of Patras, along with a 250€ prize. It features a parking game developed in **Python** using the **Pygame** library, where players are tasked with parking a car in a randomly assigned parking spot using arrow keys. AI agents were trained to play the game using **OpenAI's Gymnasium** and **Stable-Baselines3** libraries. The following algorithms -which fall under the **Reinforcement Learning** category of **Machine Learning**- were implemented:
 
 - **Q-learning**
 - Proximal Policy Optimization (**PPO**)
