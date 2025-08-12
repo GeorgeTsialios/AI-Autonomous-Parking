@@ -68,7 +68,8 @@ This graph highlights how effective the agents have become at playing the game.
 
 Explore more about the project:
 
-- [Project Report (PDF, in Greek)](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/blob/main/Report.pdf)
+- [Project Report (PDF, in Greek)](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/blob/main/Report-Greek.pdf)
+- [Project Presentation (PPTX, in English)](https://github.com/GeorgeTsialios/AI-Autonomous-Parking/blob/main/Presentation-English.pptx)
 - [Project Presentation (YouTube, in Greek)](https://www.youtube.com/watch?v=0QqAaAosaes&t=546s&ab_channel=GeorgeTsialios)
 - [Best Agent Gameplay (8-minute YouTube video)](https://www.youtube.com/watch?v=dPb2kcen6cY)
 
