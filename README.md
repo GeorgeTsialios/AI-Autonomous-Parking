@@ -115,3 +115,11 @@ For example, to watch the agent trained with the TD3 algorithm:
 
 1. Navigate to **AI-Autonomous-Parking/parking_game/{algorithm_name}-logs**.
 2. This folder contains subfolders with TensorBoard logs for each training attempt. These logs provide insights into the agent's progress during training.
+
+<br/>
+
+---
+
+<br/>
+
+**George Tsialios**
